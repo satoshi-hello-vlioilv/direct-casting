@@ -8,149 +8,318 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 :root{
-  --bg:#0c1117; --panel:#141b24cc; --panel-border:#2a3645;
-  --text:#d7dee6; --text-dim:#8a96a3; --accent:#ff9a3c; --accent-dim:#b86a25;
-  --cyan:#5fc6e8; --ok:#5fd08a; --warn:#e8c25f; --danger:#e87a5f;
-  --mono:'Consolas','Courier New',monospace;
+  --bg:#0b1016; --panel:rgba(15,21,29,.88); --border:#243142; --line:#1b2633;
+  --text:#d9e0e7; --dim:#8b97a4; --dim2:#5b6877; --accent:#ff9a3c; --accent-dim:#9c5a24;
+  --cyan:#5fc6e8; --ok:#5fd08a; --warn:#e8c25f; --danger:#ef7a5f;
+  --mono:'Consolas','SFMono-Regular','Menlo','Courier New',monospace;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);
-  font-family:'Segoe UI','Yu Gothic UI','Meiryo',sans-serif;color:var(--text);}
-#canvas-wrap{position:absolute;inset:0;}
-canvas{display:block;}
+  font-family:'Segoe UI','Yu Gothic UI','Hiragino Sans','Meiryo',sans-serif;color:var(--text);
+  -webkit-font-smoothing:antialiased;}
+#view{position:absolute;inset:0;}
+#view canvas{display:block;outline:none;touch-action:none;}
+button{font-family:inherit;}
+
+/* ===== 3Dラベル ===== */
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:4;}
+.lbl{position:absolute;left:0;top:0;white-space:nowrap;font-size:11.5px;font-weight:600;letter-spacing:.03em;
+  padding:3px 9px;border-radius:5px;background:rgba(10,15,21,.78);border:1px solid rgba(255,154,60,.42);
+  color:#e9eef3;box-shadow:0 2px 10px rgba(0,0,0,.35);will-change:transform;}
+.lbl::after{content:'';position:absolute;left:50%;top:100%;width:1px;height:10px;background:rgba(255,154,60,.5);}
+.lbl.dyn{border-color:rgba(95,198,232,.5);}
+.lbl.dyn::after{background:rgba(95,198,232,.55);}
 
 /* ===== ヘッダー ===== */
-#header{position:absolute;top:0;left:0;right:0;height:46px;z-index:10;
-  display:flex;align-items:center;gap:12px;padding:0 16px;
-  background:linear-gradient(180deg,#10161fee,#10161f99 80%,transparent);
-  pointer-events:none;}
-#header .title{font-size:15px;font-weight:600;letter-spacing:.04em;}
-#header .title i{color:var(--accent);margin-right:8px;}
-#header .sub{font-size:11px;color:var(--text-dim);letter-spacing:.06em;}
+#header{position:absolute;top:0;left:0;right:0;height:52px;z-index:10;display:flex;align-items:center;
+  padding:0 16px;background:linear-gradient(180deg,rgba(9,13,19,.94),rgba(9,13,19,.6) 75%,transparent);pointer-events:none;}
+.brand{display:flex;align-items:center;gap:11px;}
+.brand>i{font-size:19px;color:var(--accent);}
+.brand .title{font-size:15px;font-weight:700;letter-spacing:.05em;}
+.brand .sub{font-size:11px;color:var(--dim);letter-spacing:.05em;margin-top:1px;}
 
-/* ===== 左パネル ===== */
-#panel{position:absolute;top:56px;left:12px;width:262px;z-index:10;
-  background:var(--panel);border:1px solid var(--panel-border);border-radius:10px;
-  backdrop-filter:blur(8px);overflow:hidden;}
-#panel .sec{padding:12px 14px;border-bottom:1px solid #22303f;}
-#panel .sec:last-child{border-bottom:none;}
-#panel h2{font-size:11px;font-weight:600;color:var(--text-dim);
-  letter-spacing:.12em;margin-bottom:10px;display:flex;align-items:center;gap:7px;}
-#panel h2 i{color:var(--accent);width:13px;text-align:center;}
-.row{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
-.row:last-child{margin-bottom:0;}
-.row label{font-size:12px;color:var(--text);}
-.row .val{font-family:var(--mono);font-size:12px;color:var(--cyan);min-width:74px;text-align:right;}
-input[type=range]{width:100%;height:4px;-webkit-appearance:none;appearance:none;
-  background:#2a3645;border-radius:2px;outline:none;margin:2px 0 10px;}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;
-  border-radius:50%;background:var(--accent);border:2px solid #10161f;cursor:pointer;}
-input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;
-  background:var(--accent);border:2px solid #10161f;cursor:pointer;}
-select{background:#1c2632;color:var(--text);border:1px solid #2f3d4d;border-radius:5px;
-  font-size:12px;padding:3px 6px;font-family:var(--mono);}
-.btn-row{display:flex;gap:8px;}
-button{flex:1;background:#1c2632;color:var(--text);border:1px solid #2f3d4d;
-  border-radius:6px;padding:7px 4px;font-size:12px;cursor:pointer;
-  font-family:inherit;transition:background .15s,border-color .15s;}
-button:hover{background:#243140;border-color:#3d4f63;}
-button i{margin-right:5px;color:var(--accent);}
-button.primary{background:var(--accent-dim);border-color:var(--accent);color:#fff;}
-button.primary:hover{background:var(--accent);}
-button.primary i{color:#fff;}
-.cam-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
-.cam-grid button{font-size:11px;padding:7px 2px;}
-.toggle{display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;
-  user-select:none;margin-bottom:8px;}
+#topbar{position:absolute;top:10px;right:12px;z-index:11;display:flex;align-items:center;gap:8px;}
+.seg{display:flex;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  padding:3px;gap:2px;backdrop-filter:blur(8px);}
+.seg .seg-lbl{font-size:10.5px;color:var(--dim);padding:0 7px 0 6px;letter-spacing:.08em;}
+.seg button{background:transparent;border:0;color:var(--dim);font-size:12px;padding:5px 8px;border-radius:5px;
+  cursor:pointer;font-family:var(--mono);transition:background .15s,color .15s;}
+.seg button:hover{color:var(--text);background:#1b2633;}
+.seg button.on{background:var(--accent-dim);color:#fff;}
+.tb-btn{width:34px;height:34px;display:grid;place-items:center;background:var(--panel);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);cursor:pointer;backdrop-filter:blur(8px);transition:border-color .15s;}
+.tb-btn:hover{border-color:#3d5066;}
+.tb-btn i{font-size:13px;}
+.tb-btn.hot{border-color:var(--accent);color:var(--accent);}
+#clock{font-family:var(--mono);font-size:12px;color:var(--dim);background:var(--panel);border:1px solid var(--border);
+  border-radius:8px;padding:8px 10px;backdrop-filter:blur(8px);}
+#clock b{color:var(--text);font-weight:500;}
+
+/* ===== パネル共通 ===== */
+.panel{position:absolute;top:58px;z-index:10;background:var(--panel);border:1px solid var(--border);border-radius:11px;
+  backdrop-filter:blur(10px);overflow-y:auto;overflow-x:hidden;max-height:calc(100% - 150px);scrollbar-width:thin;
+  scrollbar-color:#2b3a4c transparent;}
+.panel::-webkit-scrollbar{width:6px;}
+.panel::-webkit-scrollbar-thumb{background:#2b3a4c;border-radius:3px;}
+.panel .sec{padding:12px 14px;border-bottom:1px solid var(--line);}
+.panel .sec:last-child{border-bottom:none;}
+.panel h2{font-size:11px;font-weight:600;color:var(--dim);letter-spacing:.12em;margin-bottom:10px;
+  display:flex;align-items:center;gap:7px;}
+.panel h2 i{color:var(--accent);width:13px;text-align:center;}
+.panel h2 .chip{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--cyan);
+  border:1px solid #28506a;border-radius:4px;padding:1px 6px;}
+#panel{left:12px;width:268px;}
+#side{right:12px;width:304px;}
+
+.row{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.row label{font-size:12px;}
+.row .val{font-family:var(--mono);font-size:12px;color:var(--cyan);}
+input[type=range]{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:#263344;
+  border-radius:2px;outline:none;margin:4px 0 12px;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--accent);border:2px solid #0f151d;cursor:pointer;}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--accent);
+  border:2px solid #0f151d;cursor:pointer;}
+.pills{display:flex;gap:4px;margin:2px 0 12px;}
+.pills button{flex:1;background:#18212c;border:1px solid #2a3747;color:var(--dim);border-radius:6px;padding:5px 0;
+  font-size:12px;cursor:pointer;transition:all .15s;}
+.pills button:hover{color:var(--text);}
+.pills button.on{background:var(--accent-dim);border-color:var(--accent);color:#fff;}
+.note{font-size:10.5px;color:var(--dim2);line-height:1.5;margin-top:-4px;}
+.toggle{display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;user-select:none;margin-bottom:8px;}
 .toggle:last-child{margin-bottom:0;}
 .toggle input{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;}
+.cam-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.cam-grid button{background:#18212c;color:var(--text);border:1px solid #2a3747;border-radius:6px;padding:7px 4px;
+  font-size:11.5px;cursor:pointer;transition:background .15s,border-color .15s;text-align:left;padding-left:9px;}
+.cam-grid button:hover{background:#212d3b;border-color:#3b4d62;}
+.cam-grid button i{color:var(--accent);width:16px;margin-right:4px;text-align:center;}
+
+/* ===== 工程フロー ===== */
+.line-title{font-size:11px;color:var(--text);font-weight:600;margin:4px 0 6px;display:flex;align-items:center;gap:7px;}
+.line-title i{color:var(--dim);font-size:11px;width:13px;text-align:center;}
+.line-title .heat{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--dim);font-weight:400;}
+ol.steps{list-style:none;margin:0 0 10px 6px;border-left:1px solid #26344a;}
+ol.steps li{position:relative;display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--dim2);
+  padding:3px 0 3px 12px;transition:color .2s;}
+ol.steps li::before{content:'';position:absolute;left:-4px;top:50%;width:7px;height:7px;margin-top:-3.5px;
+  border-radius:50%;background:#1a2432;border:1px solid #33455c;}
+ol.steps li i{width:14px;text-align:center;font-size:11px;}
+ol.steps li .st{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--cyan);}
+ol.steps li.done{color:var(--dim);}
+ol.steps li.done::before{background:#2c5a45;border-color:#3f8a64;}
+ol.steps li.active{color:var(--text);font-weight:600;}
+ol.steps li.active i{color:var(--accent);}
+ol.steps li.active::before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px var(--accent);
+  animation:pulse 1.4s ease-in-out infinite;}
+@keyframes pulse{50%{box-shadow:0 0 2px var(--accent);}}
+
+/* ===== 炉況ゲージ ===== */
+.gauge{background:#131b25;border:1px solid #223042;border-radius:8px;padding:8px 10px;margin-bottom:8px;}
+.gauge:last-child{margin-bottom:0;}
+.g-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.g-name{font-size:12px;font-weight:600;}
+.g-state{font-size:10.5px;color:var(--warn);}
+.g-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;}
+.g-grid div{display:flex;align-items:baseline;justify-content:space-between;font-size:11px;color:var(--dim);}
+.g-grid b{font-family:var(--mono);font-size:13px;color:var(--text);font-weight:500;}
+.g-grid b.t{color:var(--accent);}
+.g-grid small{font-size:10px;color:var(--dim2);margin-left:2px;}
+.bar{height:5px;border-radius:3px;background:#1f2a38;margin-top:7px;position:relative;overflow:hidden;}
+.bar div{position:absolute;top:0;bottom:0;left:0;border-radius:3px;transition:width .25s;}
+.bar .liq{background:linear-gradient(90deg,#c9591f,#ff9a3c);}
+.bar .scr{background:#7d8894;}
+
+/* ===== ログ ===== */
+#log{list-style:none;max-height:150px;overflow:hidden;}
+#log li{font-size:11px;color:var(--dim);padding:2px 0;line-height:1.45;display:flex;gap:8px;}
+#log li:first-child{color:var(--text);}
+#log li .t{font-family:var(--mono);color:var(--dim2);flex-shrink:0;}
+#log li.hot .m{color:#ffb36b;}
+#log li.ok .m{color:#8fe0b0;}
 
 /* ===== ステータスバー ===== */
-#status{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:10;
-  display:flex;align-items:stretch;gap:1px;border-radius:9px;overflow:hidden;
-  border:1px solid var(--panel-border);backdrop-filter:blur(8px);}
-.stat{background:var(--panel);padding:8px 16px;min-width:108px;text-align:center;}
-.stat .k{font-size:10px;color:var(--text-dim);letter-spacing:.1em;margin-bottom:3px;}
-.stat .v{font-family:var(--mono);font-size:16px;color:var(--text);}
-.stat .v small{font-size:10px;color:var(--text-dim);margin-left:2px;}
+#status{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:10;display:flex;align-items:stretch;
+  gap:1px;border-radius:10px;overflow:hidden;border:1px solid var(--border);backdrop-filter:blur(10px);max-width:calc(100% - 24px);}
+.stat{background:var(--panel);padding:7px 14px;min-width:96px;text-align:center;}
+.stat .k{font-size:10px;color:var(--dim);letter-spacing:.08em;margin-bottom:2px;white-space:nowrap;}
+.stat .v{font-family:var(--mono);font-size:16px;color:var(--text);white-space:nowrap;}
+.stat .v small{font-size:10px;color:var(--dim);margin-left:2px;}
 .stat .v.temp{color:var(--accent);}
 .stat .v.len{color:var(--cyan);}
-#phase-chip{display:flex;align-items:center;gap:8px;padding:8px 18px;
-  background:var(--panel);font-size:13px;font-weight:600;min-width:150px;}
-#phase-dot{width:9px;height:9px;border-radius:50%;background:var(--ok);
-  box-shadow:0 0 8px currentColor;flex-shrink:0;}
-#prog-wrap{height:3px;background:#22303f;position:relative;margin-top:5px;border-radius:2px;}
-#prog{height:100%;width:0%;background:var(--cyan);border-radius:2px;transition:width .3s;}
+#phase-chip{display:flex;align-items:center;gap:9px;padding:7px 16px;background:var(--panel);min-width:176px;}
+#phase-dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px currentColor;flex-shrink:0;}
+#phase-chip .pk{font-size:10px;color:var(--dim);letter-spacing:.08em;}
+#phase-txt{font-size:13px;font-weight:600;white-space:nowrap;}
+#prog-wrap{height:3px;background:#22303f;margin-top:4px;border-radius:2px;}
+#prog{height:100%;width:0%;background:var(--cyan);border-radius:2px;transition:width .25s;}
 
-#hint{position:absolute;bottom:14px;right:16px;z-index:10;font-size:11px;
-  color:var(--text-dim);text-align:right;line-height:1.7;pointer-events:none;}
-#hint i{width:15px;text-align:center;color:#5a6877;}
+#hint{position:absolute;bottom:14px;left:16px;z-index:9;font-size:11px;color:var(--dim2);line-height:1.75;pointer-events:none;}
+#hint i{width:15px;text-align:center;}
+
+#loading{position:absolute;inset:0;z-index:50;display:grid;place-items:center;background:var(--bg);
+  color:var(--dim);font-size:13px;letter-spacing:.1em;transition:opacity .5s;}
+#loading i{color:var(--accent);margin-right:8px;}
+
+/* ===== レスポンシブ ===== */
+body.hide-panels .panel{display:none;}
+@media (max-width:1180px){
+  #side{display:none;}
+  body.show-side #side{display:block;}
+  #hint{display:none;}
+}
+@media (max-width:760px){
+  #panel{display:none;width:calc(100% - 24px);}
+  #side{width:calc(100% - 24px);right:12px;}
+  body.show-panel #panel{display:block;}
+  .brand>div{display:none;}
+  #clock{display:none;}
+  .seg .seg-lbl{display:none;}
+  .seg button{padding:5px 6px;}
+  #status{left:8px;right:8px;transform:none;max-width:none;}
+  .stat{padding:6px 6px;min-width:0;flex:1;}
+  .stat .k{font-size:9px;letter-spacing:.02em;}
+  .stat .v{font-size:13px;}
+  #phase-chip{min-width:0;flex:1.4;padding:6px 8px;}
+  #phase-txt{font-size:12px;}
+  .stat.opt{display:none;}
+}
 </style>
 </head>
 <body>
 
-<div id="canvas-wrap"></div>
+<div id="view"></div>
+<div id="labels"></div>
 
 <div id="header">
-  <span class="title"><i class="fa-solid fa-industry"></i>DC鋳造ライン 3Dシミュレーター</span>
-  <span class="sub">アルミニウム半連続鋳造（Direct Chill Casting）</span>
+  <div class="brand">
+    <i class="fa-solid fa-industry"></i>
+    <div>
+      <div class="title">DC鋳造ライン 3Dシミュレーター</div>
+      <div class="sub">鋳造炉でスクラップ溶解 → 保持炉 → 3本鋳込み鋳造機 → 天井クレーンで通路へ横倒し</div>
+    </div>
+  </div>
 </div>
 
-<div id="panel">
+<div id="topbar">
+  <div id="clock">経過 <b id="clk">00:00</b></div>
+  <div class="seg" id="speed-seg">
+    <span class="seg-lbl">再生速度</span>
+    <button data-speed="0.5">×0.5</button>
+    <button data-speed="1" class="on">×1</button>
+    <button data-speed="2">×2</button>
+    <button data-speed="4">×4</button>
+    <button data-speed="8">×8</button>
+  </div>
+  <button class="tb-btn" id="btn-pause" title="一時停止 / 再開"><i class="fa-solid fa-pause"></i></button>
+  <button class="tb-btn" id="btn-reset" title="最初からやり直す"><i class="fa-solid fa-rotate-left"></i></button>
+  <button class="tb-btn" id="btn-panels" title="パネル表示の切替"><i class="fa-solid fa-table-columns"></i></button>
+</div>
+
+<!-- ===== 左パネル：操作 ===== -->
+<aside id="panel" class="panel">
   <div class="sec">
     <h2><i class="fa-solid fa-sliders"></i>鋳造条件</h2>
     <div class="row"><label>鋳造速度</label><span class="val" id="v-speed">60 mm/min</span></div>
-    <input type="range" id="in-speed" min="40" max="80" step="1" value="60">
-    <div class="row"><label>冷却水量</label><span class="val" id="v-water">100 m³/h</span></div>
-    <input type="range" id="in-water" min="50" max="150" step="5" value="100">
-    <div class="row">
-      <label>時間倍率</label>
-      <select id="in-sim">
-        <option value="30">×30</option>
-        <option value="60" selected>×60</option>
-        <option value="120">×120</option>
-      </select>
+    <input type="range" id="in-speed" min="40" max="90" step="1" value="60">
+    <div class="row"><label>冷却水量</label><span class="val" id="v-water">110 m³/h</span></div>
+    <input type="range" id="in-water" min="60" max="160" step="5" value="110">
+    <div class="row"><label>目標鋳造長</label><span class="val" id="v-target">6.0 m</span></div>
+    <input type="range" id="in-target" min="4" max="7" step="0.5" value="6">
+    <div class="row"><label>鋳込み本数</label><span class="val" id="v-strands">3 本</span></div>
+    <div class="pills" id="pl-strands">
+      <button data-v="1">1本</button><button data-v="2">2本</button><button data-v="3" class="on">3本</button>
     </div>
+    <div class="note">※ 鋳造長・本数は次の鋳造から反映されます</div>
   </div>
   <div class="sec">
-    <h2><i class="fa-solid fa-play"></i>運転操作</h2>
-    <div class="btn-row">
-      <button id="btn-pause" class="primary"><i class="fa-solid fa-pause"></i>一時停止</button>
-      <button id="btn-reset"><i class="fa-solid fa-rotate-left"></i>リセット</button>
+    <h2><i class="fa-solid fa-fire-flame-curved"></i>溶解条件</h2>
+    <div class="row"><label>装入回数（1ヒート）</label><span class="val" id="v-charges">3 回</span></div>
+    <div class="pills" id="pl-charges">
+      <button data-v="2">2回</button><button data-v="3" class="on">3回</button><button data-v="4">4回</button>
     </div>
+    <div class="row"><label>出湯温度</label><span class="val" id="v-meltT">750 °C</span></div>
+    <input type="range" id="in-meltT" min="720" max="780" step="5" value="750">
   </div>
   <div class="sec">
     <h2><i class="fa-solid fa-eye"></i>表示</h2>
-    <label class="toggle"><input type="checkbox" id="tg-pit">ピット壁を透過表示</label>
+    <label class="toggle"><input type="checkbox" id="tg-auto" checked>自動カメラ（工程を追従）</label>
+    <label class="toggle"><input type="checkbox" id="tg-roof" checked>炉内を表示（炉天井カット）</label>
+    <label class="toggle"><input type="checkbox" id="tg-pit">鋳造ピットを透視</label>
     <label class="toggle"><input type="checkbox" id="tg-label" checked>設備名ラベル</label>
+    <label class="toggle"><input type="checkbox" id="tg-bloom" checked>グロー効果（高画質）</label>
   </div>
   <div class="sec">
     <h2><i class="fa-solid fa-video"></i>視点</h2>
     <div class="cam-grid">
       <button data-cam="overview"><i class="fa-solid fa-expand"></i>全景</button>
-      <button data-cam="table"><i class="fa-solid fa-table-cells-large"></i>鋳造テーブル</button>
-      <button data-cam="pit"><i class="fa-solid fa-down-long"></i>鋳造ピット</button>
-      <button data-cam="melt"><i class="fa-solid fa-fire"></i>炉・脱ガス</button>
+      <button data-cam="mf"><i class="fa-solid fa-fire"></i>鋳造炉</button>
+      <button data-cam="hf"><i class="fa-solid fa-temperature-half"></i>保持炉</button>
+      <button data-cam="launder"><i class="fa-solid fa-filter"></i>溶湯処理</button>
+      <button data-cam="table"><i class="fa-solid fa-table-cells-large"></i>鋳造機</button>
+      <button data-cam="pit"><i class="fa-solid fa-down-long"></i>ピット内部</button>
+      <button data-cam="yard"><i class="fa-solid fa-layer-group"></i>スラブ置場</button>
+      <button data-cam="crane"><i class="fa-solid fa-person-digging"></i>クレーン</button>
     </div>
   </div>
-</div>
+</aside>
+
+<!-- ===== 右パネル：工程・炉況 ===== -->
+<aside id="side" class="panel">
+  <div class="sec">
+    <h2><i class="fa-solid fa-diagram-project"></i>工程フロー</h2>
+    <div class="line-title"><i class="fa-solid fa-fire-flame-curved"></i>溶解ライン<span class="heat" id="heat-no">HEAT #1</span></div>
+    <ol class="steps" id="steps-ml"></ol>
+    <div class="line-title"><i class="fa-solid fa-industry"></i>鋳造ライン<span class="heat" id="cast-no">CAST #0</span></div>
+    <ol class="steps" id="steps-cl"></ol>
+  </div>
+  <div class="sec">
+    <h2><i class="fa-solid fa-temperature-half"></i>炉況</h2>
+    <div class="gauge">
+      <div class="g-head"><span class="g-name">鋳造炉（溶解・固定式）</span><span class="g-state" id="mf-state">―</span></div>
+      <div class="g-grid">
+        <div>温度<span><b class="t" id="mf-temp">―</b><small>°C</small></span></div>
+        <div>溶湯<span><b id="mf-mass">―</b><small>t</small></span></div>
+        <div>バーナー<span><b id="mf-burn">―</b><small>%</small></span></div>
+        <div>スクラップ<span><b id="mf-scrap">―</b><small>t</small></span></div>
+      </div>
+      <div class="bar"><div class="liq" id="mf-bar"></div><div class="scr" id="mf-bar2"></div></div>
+    </div>
+    <div class="gauge">
+      <div class="g-head"><span class="g-name">保持炉（固定式）</span><span class="g-state" id="hf-state">―</span></div>
+      <div class="g-grid">
+        <div>温度<span><b class="t" id="hf-temp">―</b><small>°C</small></span></div>
+        <div>溶湯<span><b id="hf-mass">―</b><small>t</small></span></div>
+        <div>バーナー<span><b id="hf-burn">―</b><small>%</small></span></div>
+        <div>出湯口<span><b id="hf-tap">―</b></span></div>
+      </div>
+      <div class="bar"><div class="liq" id="hf-bar"></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <h2><i class="fa-solid fa-list"></i>イベントログ</h2>
+    <ul id="log"></ul>
+  </div>
+</aside>
 
 <div id="status">
-  <div id="phase-chip"><span id="phase-dot"></span><span id="phase-txt">鋳造準備</span></div>
-  <div class="stat"><div class="k">溶湯温度</div><div class="v temp" id="s-temp">―<small>°C</small></div></div>
-  <div class="stat" style="min-width:150px;">
+  <div id="phase-chip"><span id="phase-dot"></span><div><div class="pk">鋳造ライン</div><div id="phase-txt">溶湯待ち</div></div></div>
+  <div class="stat opt"><div class="k">鋳造温度</div><div class="v temp" id="s-temp">―<small>°C</small></div></div>
+  <div class="stat" style="min-width:148px;">
     <div class="k">鋳造長 / 目標</div>
     <div class="v len" id="s-len">0.00<small>/ 6.00 m</small></div>
     <div id="prog-wrap"><div id="prog"></div></div>
   </div>
-  <div class="stat"><div class="k">鋳造速度</div><div class="v" id="s-speed">60<small>mm/min</small></div></div>
-  <div class="stat"><div class="k">経過時間</div><div class="v" id="s-time">0:00<small>実時間換算</small></div></div>
+  <div class="stat opt"><div class="k">鋳造速度</div><div class="v" id="s-speed">60<small>mm/min</small></div></div>
+  <div class="stat opt"><div class="k">鋳造時間（実時間換算）</div><div class="v" id="s-time">0:00<small>h:mm</small></div></div>
+  <div class="stat"><div class="k">スラブ置場</div><div class="v" id="s-yard">0<small>本</small></div></div>
 </div>
 
 <div id="hint">
-  <div><i class="fa-solid fa-arrows-up-down-left-right"></i> 左ドラッグ：回転　右ドラッグ：平行移動</div>
-  <div><i class="fa-solid fa-magnifying-glass"></i> ホイール：ズーム</div>
+  <div><i class="fa-solid fa-computer-mouse"></i> 左ドラッグ：回転　右ドラッグ：平行移動　ホイール：ズーム</div>
 </div>
+
+<div id="loading"><div><i class="fa-solid fa-industry"></i>工場を構築しています…</div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -158,860 +327,2574 @@ button.primary i{color:#fff;}
 'use strict';
 
 /* =====================================================================
- * 基本セットアップ
+ * 0. 汎用ユーティリティ
  * =================================================================== */
-const wrap = document.getElementById('canvas-wrap');
-const renderer = new THREE.WebGLRenderer({ antialias:true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b)=> v<a ? a : (v>b ? b : v);
+const lerp = (a,b,t)=> a + (b-a)*t;
+const sstep = (a,b,x)=>{ const t = clamp((x-a)/(b-a),0,1); return t*t*(3-2*t); };
+const ease = t => t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+const DEG = Math.PI/180;
+let seed = 20260928;
+const rnd = ()=> (seed = (seed*16807) % 2147483647) / 2147483647;
+const rr = (a,b)=> a + (b-a)*rnd();
+const gauss = ()=> (rnd()+rnd()+rnd()-1.5)/1.5;
+const lin = hex => new THREE.Color(hex).convertSRGBToLinear();
+const V3 = (x,y,z)=> new THREE.Vector3(x,y,z);
+const UP = V3(0,1,0);
+const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3();
+const _m4 = new THREE.Matrix4(), _c = new THREE.Color();
+
+/* =====================================================================
+ * 1. レンダラー・シーン
+ * =================================================================== */
+const view = $('view');
+const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+const MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || Math.min(window.innerWidth, window.innerHeight) < 600;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MOBILE ? 1.25 : 1.5));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-wrap.appendChild(renderer.domElement);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+view.appendChild(renderer.domElement);
+const MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0c1117);
-scene.fog = new THREE.Fog(0x0c1117, 55, 130);
+const BG_HEX = 0x0e141b;
+scene.fog = new THREE.Fog(BG_HEX, 80, 210);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 600);
 
-const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 300);
+/* ---- ポストプロセス（自前ブルーム：HDR→輝度抽出→多段ぼかし→合成） ---- */
+const Post = (function(){
+  const P = { ok:false, on:true };
+  const gl2 = renderer.capabilities.isWebGL2;
+  if(!gl2) return Object.assign(P, { render(){ renderer.render(scene, camera); }, resize(){} });
+  const floatOK = renderer.extensions.has('EXT_color_buffer_float');
+  const TYPE = floatOK ? THREE.HalfFloatType : THREE.UnsignedByteType;
+  const NMIP = 5;
+  let rtScene, rtBright, mipsH = [], mipsV = [];
+  const qCam = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+  const qScene = new THREE.Scene();
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2,2));
+  quad.frustumCulled = false;
+  qScene.add(quad);
+  const VS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
+  const brightMat = new THREE.ShaderMaterial({
+    uniforms:{ tDiffuse:{value:null}, uThresh:{value:0.82}, uKnee:{value:0.35} },
+    vertexShader:VS, depthTest:false, depthWrite:false,
+    fragmentShader:`uniform sampler2D tDiffuse; uniform float uThresh, uKnee; varying vec2 vUv;
+      void main(){ vec3 c = min(texture2D(tDiffuse, vUv).rgb, vec3(6.0));
+        float l = max(c.r, max(c.g, c.b));
+        float w = smoothstep(uThresh, uThresh + uKnee, l);
+        gl_FragColor = vec4(c * w, 1.0); }`
+  });
+  const blurMat = new THREE.ShaderMaterial({
+    uniforms:{ tDiffuse:{value:null}, uDir:{value:new THREE.Vector2()} },
+    vertexShader:VS, depthTest:false, depthWrite:false,
+    fragmentShader:`uniform sampler2D tDiffuse; uniform vec2 uDir; varying vec2 vUv;
+      void main(){
+        vec3 s = texture2D(tDiffuse, vUv).rgb * 0.2270270270;
+        s += texture2D(tDiffuse, vUv + uDir*1.3846153846).rgb * 0.3162162162;
+        s += texture2D(tDiffuse, vUv - uDir*1.3846153846).rgb * 0.3162162162;
+        s += texture2D(tDiffuse, vUv + uDir*3.2307692308).rgb * 0.0702702703;
+        s += texture2D(tDiffuse, vUv - uDir*3.2307692308).rgb * 0.0702702703;
+        gl_FragColor = vec4(s, 1.0); }`
+  });
+  const compMat = new THREE.ShaderMaterial({
+    uniforms:{ tScene:{value:null}, tB0:{value:null}, tB1:{value:null}, tB2:{value:null}, tB3:{value:null}, tB4:{value:null},
+      uStrength:{value:0.85} },
+    vertexShader:VS, depthTest:false, depthWrite:false,
+    fragmentShader:`uniform sampler2D tScene, tB0, tB1, tB2, tB3, tB4; uniform float uStrength; varying vec2 vUv;
+      float rand(vec2 co){ return fract(sin(dot(co, vec2(12.9898,78.233))) * 43758.5453); }
+      void main(){
+        vec3 c = texture2D(tScene, vUv).rgb;
+        vec3 b = texture2D(tB0, vUv).rgb * 1.0 + texture2D(tB1, vUv).rgb * 0.9 + texture2D(tB2, vUv).rgb * 0.75
+               + texture2D(tB3, vUv).rgb * 0.6 + texture2D(tB4, vUv).rgb * 0.5;
+        c += b * uStrength * 0.32;
+        float vg = smoothstep(1.15, 0.35, length(vUv - 0.5) * 1.25);
+        c *= mix(0.8, 1.0, vg);
+        vec4 o = LinearTosRGB(vec4(clamp(c, 0.0, 1.0), 1.0));
+        o.rgb += (rand(gl_FragCoord.xy) - 0.5) / 255.0;
+        gl_FragColor = o; }`
+  });
+  function rt(w, h, ms){
+    const o = { type:TYPE, format:THREE.RGBAFormat, minFilter:THREE.LinearFilter, magFilter:THREE.LinearFilter,
+      depthBuffer:!!ms, stencilBuffer:false };
+    let t;
+    if(ms){ t = new THREE.WebGLMultisampleRenderTarget(w, h, o); t.samples = 4; }
+    else t = new THREE.WebGLRenderTarget(w, h, o);
+    return t;
+  }
+  P.resize = function(){
+    const s = renderer.getDrawingBufferSize(new THREE.Vector2());
+    const w = Math.max(2, s.x), h = Math.max(2, s.y);
+    if(!rtScene){
+      rtScene = rt(w, h, true);
+      rtBright = rt(Math.max(1,w>>1), Math.max(1,h>>1));
+      for(let i=0;i<NMIP;i++){
+        const mw = Math.max(1, w >> (i+1)), mh = Math.max(1, h >> (i+1));
+        mipsH.push(rt(mw, mh)); mipsV.push(rt(mw, mh));
+      }
+    }else{
+      rtScene.setSize(w, h);
+      rtBright.setSize(Math.max(1,w>>1), Math.max(1,h>>1));
+      for(let i=0;i<NMIP;i++){
+        const mw = Math.max(1, w >> (i+1)), mh = Math.max(1, h >> (i+1));
+        mipsH[i].setSize(mw, mh); mipsV[i].setSize(mw, mh);
+      }
+    }
+  };
+  P.render = function(){
+    if(!P.on){ renderer.setRenderTarget(null); renderer.render(scene, camera); return; }
+    renderer.setRenderTarget(rtScene);
+    renderer.render(scene, camera);
+    quad.material = brightMat;
+    brightMat.uniforms.tDiffuse.value = rtScene.texture;
+    renderer.setRenderTarget(rtBright); renderer.render(qScene, qCam);
+    let src = rtBright;
+    quad.material = blurMat;
+    for(let i=0;i<NMIP;i++){
+      blurMat.uniforms.tDiffuse.value = src.texture;
+      blurMat.uniforms.uDir.value.set(1/mipsH[i].width, 0);
+      renderer.setRenderTarget(mipsH[i]); renderer.render(qScene, qCam);
+      blurMat.uniforms.tDiffuse.value = mipsH[i].texture;
+      blurMat.uniforms.uDir.value.set(0, 1/mipsV[i].height);
+      renderer.setRenderTarget(mipsV[i]); renderer.render(qScene, qCam);
+      src = mipsV[i];
+    }
+    quad.material = compMat;
+    const u = compMat.uniforms;
+    u.tScene.value = rtScene.texture;
+    u.tB0.value = mipsV[0].texture; u.tB1.value = mipsV[1].texture; u.tB2.value = mipsV[2].texture;
+    u.tB3.value = mipsV[3].texture; u.tB4.value = mipsV[4].texture;
+    renderer.setRenderTarget(null); renderer.render(qScene, qCam);
+  };
+  try{ P.resize(); P.ok = true; }catch(e){ console.warn('bloom disabled', e); P.render = ()=> renderer.render(scene, camera); }
+  return P;
+})();
+
+// ブルーム有無で背景・フォグの色空間を合わせる
+function applyRenderMode(){
+  const useRT = Post.ok && Post.on;
+  scene.background = useRT ? lin(BG_HEX) : new THREE.Color(BG_HEX);
+  scene.fog.color.copy(scene.background);
+}
+
+/* ---- 環境マップ（金属の映り込み用に簡易な建屋内を焼き込む） ---- */
+(function buildEnvironment(){
+  const pm = new THREE.PMREMGenerator(renderer);
+  const es = new THREE.Scene();
+  const room = new THREE.Mesh(new THREE.BoxGeometry(120, 34, 60), new THREE.MeshBasicMaterial({ color:lin(0x39434f), side:THREE.BackSide }));
+  room.position.y = 15; es.add(room);
+  const fl = new THREE.Mesh(new THREE.PlaneGeometry(120, 60), new THREE.MeshBasicMaterial({ color:lin(0x24282d) }));
+  fl.rotation.x = -Math.PI/2; fl.position.y = 0.05; es.add(fl);
+  const lampM = new THREE.MeshBasicMaterial({ color:new THREE.Color(6, 5.7, 5.1) });
+  for(let x=-48; x<=48; x+=16) for(const z of [-10, 10]){
+    const l = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.3, 2.4), lampM); l.position.set(x, 31, z); es.add(l);
+  }
+  const win = new THREE.Mesh(new THREE.BoxGeometry(110, 5, 0.5), new THREE.MeshBasicMaterial({ color:new THREE.Color(1.5, 1.8, 2.2) }));
+  win.position.set(0, 24, -29.6); es.add(win);
+  const warm = new THREE.Mesh(new THREE.BoxGeometry(12, 5, 0.5), new THREE.MeshBasicMaterial({ color:new THREE.Color(3.2, 1.2, 0.3) }));
+  warm.position.set(-35, 3, 29.6); es.add(warm);
+  scene.environment = pm.fromScene(es, 0.03).texture;
+  pm.dispose();
+})();
 
 /* ---- 照明 ---- */
-scene.add(new THREE.HemisphereLight(0x9eb4cc, 0x1a2028, 0.55));
-const sun = new THREE.DirectionalLight(0xfff2e0, 0.85);
-sun.position.set(18, 30, 14);
+const hemi = new THREE.HemisphereLight(lin(0xb4c6da), lin(0x3b352f), 0.62);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(lin(0xfff0da), 2.3);
+sun.position.set(-4, 46, 32);
+sun.target.position.set(-22, 0, 0);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = -42; sun.shadow.camera.right = 22;
-sun.shadow.camera.top = 26;  sun.shadow.camera.bottom = -14;
-sun.shadow.camera.far = 90;
-sun.shadow.bias = -0.0006;
-scene.add(sun);
+sun.shadow.mapSize.set(MOBILE ? 2048 : 4096, MOBILE ? 2048 : 4096);
+Object.assign(sun.shadow.camera, { left:-60, right:60, top:40, bottom:-40, near:5, far:130 });
+sun.shadow.bias = -0.00035;
+sun.shadow.normalBias = 0.035;
+scene.add(sun, sun.target);
+const fill = new THREE.DirectionalLight(lin(0x9db8d8), 0.45);
+fill.position.set(40, 22, -30);
+scene.add(fill);
 
-// 溶湯グロー（鋳造テーブル / 炉前）
-const moldLight = new THREE.PointLight(0xff7a1a, 0, 14, 2);
-moldLight.position.set(0, 1.6, 0);
-scene.add(moldLight);
-const furnaceLight = new THREE.PointLight(0xff7a1a, 0.9, 12, 2);
-furnaceLight.position.set(-24.2, 1.8, 0);
-scene.add(furnaceLight);
+function pLight(hex, dist, x,y,z){
+  const l = new THREE.PointLight(lin(hex), 0, dist, 2);
+  l.position.set(x,y,z); scene.add(l); return l;
+}
 
 /* =====================================================================
- * 共有マテリアル・テクスチャ
+ * 2. テクスチャ（Canvas 生成）
  * =================================================================== */
-function canvasTex(size, painter){
-  const c = document.createElement('canvas');
-  c.width = c.height = size;
-  painter(c.getContext('2d'), size);
+function mkCanvas(w,h){ const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+function toTex(c, srgb){
   const t = new THREE.CanvasTexture(c);
+  if(srgb !== false) t.encoding = THREE.sRGBEncoding;
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = Math.min(8, MAX_ANISO);
   return t;
 }
+function noiseFill(g, w, h, amp){
+  const img = g.getImageData(0,0,w,h), d = img.data;
+  for(let i=0;i<d.length;i+=4){ const n = (rnd()-0.5)*amp; d[i]+=n; d[i+1]+=n; d[i+2]+=n; }
+  g.putImageData(img,0,0);
+}
 
-// 溶湯ノイズ（流動表現用）
-const meltTex = canvasTex(128, (g,s)=>{
-  g.fillStyle = '#ff8a20'; g.fillRect(0,0,s,s);
-  for(let i=0;i<260;i++){
-    const r = 2+Math.random()*9;
-    g.fillStyle = `rgba(${230+Math.random()*25|0},${120+Math.random()*90|0},20,${0.25+Math.random()*0.4})`;
-    g.beginPath(); g.arc(Math.random()*s, Math.random()*s, r, 0, 7); g.fill();
+const texConcrete = (function(){
+  const c = mkCanvas(512,512), g = c.getContext('2d');
+  g.fillStyle = '#6e7378'; g.fillRect(0,0,512,512);
+  for(let i=0;i<80;i++){
+    const x = rnd()*512, y = rnd()*512, r = 20+rnd()*110, a = 0.035+rnd()*0.08, dk = rnd()<0.55;
+    const gr = g.createRadialGradient(x,y,0,x,y,r);
+    gr.addColorStop(0, dk ? `rgba(36,40,44,${a})` : `rgba(165,168,172,${a})`);
+    gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.fillRect(x-r,y-r,r*2,r*2);
   }
-});
+  for(let i=0;i<7;i++){
+    g.save(); g.translate(rnd()*512, rnd()*512); g.rotate(rnd()*Math.PI);
+    g.fillStyle = `rgba(25,26,28,${0.06+rnd()*0.08})`;
+    g.beginPath(); g.ellipse(0,0, 20+rnd()*50, 8+rnd()*18, 0, 0, 7); g.fill(); g.restore();
+  }
+  noiseFill(g,512,512,20);
+  g.strokeStyle = 'rgba(34,37,41,0.35)'; g.lineWidth = 1;
+  for(let i=0;i<6;i++){
+    let x = rnd()*512, y = rnd()*512; g.beginPath(); g.moveTo(x,y);
+    for(let k=0;k<9;k++){ x += (rnd()-0.5)*46; y += (rnd()-0.5)*46; g.lineTo(x,y); }
+    g.stroke();
+  }
+  g.fillStyle = 'rgba(26,29,32,0.85)'; g.fillRect(0,0,512,3); g.fillRect(0,0,3,512);
+  return toTex(c);
+})();
 
-// 危険表示（黄黒トラ柄）
-const stripeTex = canvasTex(64, (g,s)=>{
-  g.fillStyle = '#d9a514'; g.fillRect(0,0,s,s);
+const texBrick = (function(){
+  const c = mkCanvas(256,256), g = c.getContext('2d');
+  g.fillStyle = '#7a6d5f'; g.fillRect(0,0,256,256);
+  const bw = 64, bh = 32;
+  for(let r=0;r<8;r++) for(let k=-1;k<5;k++){
+    const x = k*bw + (r%2 ? bw/2 : 0), y = r*bh, t = 138 + rnd()*46 | 0;
+    g.fillStyle = `rgb(${t+30},${t+12},${t-16})`; g.fillRect(x+2, y+2, bw-4, bh-4);
+    g.fillStyle = `rgba(255,255,255,${0.03+rnd()*0.05})`; g.fillRect(x+2, y+2, bw-4, 4);
+  }
+  noiseFill(g,256,256,24);
+  return toTex(c);
+})();
+
+const texCorr = (function(){
+  const c = mkCanvas(128,512), g = c.getContext('2d');
+  for(let x=0;x<128;x++){
+    const s = 0.5 + 0.5*Math.sin(x/128*Math.PI*2*6), v = 74 + s*42 | 0;
+    g.fillStyle = `rgb(${v-8},${v+2},${v+15})`; g.fillRect(x,0,1,512);
+  }
+  g.fillStyle = 'rgba(18,22,28,0.55)'; g.fillRect(0,0,128,3);
+  for(let i=0;i<34;i++){ g.fillStyle = `rgba(28,33,38,${0.03+rnd()*0.06})`; g.fillRect(rnd()*128, rnd()*512, 1+rnd()*3, 40+rnd()*220); }
+  noiseFill(g,128,512,10);
+  const t = toTex(c); t.repeat.set(1, 0.25); return t;
+})();
+
+const texStripe = (function(){
+  const c = mkCanvas(64,64), g = c.getContext('2d');
+  g.fillStyle = '#d9a514'; g.fillRect(0,0,64,64);
   g.strokeStyle = '#15181c'; g.lineWidth = 11;
-  for(let x=-s; x<s*2; x+=22){
-    g.beginPath(); g.moveTo(x,s+6); g.lineTo(x+s,-6); g.stroke();
+  for(let x=-64;x<128;x+=22){ g.beginPath(); g.moveTo(x,70); g.lineTo(x+64,-6); g.stroke(); }
+  return toTex(c);
+})();
+
+const texWood = (function(){
+  const c = mkCanvas(256,64), g = c.getContext('2d');
+  g.fillStyle = '#6b4a2e'; g.fillRect(0,0,256,64);
+  for(let i=0;i<40;i++){
+    g.strokeStyle = `rgba(${rnd()<0.5?35:120},${rnd()<0.5?22:80},12,${0.15+rnd()*0.25})`;
+    g.lineWidth = 1+rnd()*2; const y = rnd()*64;
+    g.beginPath(); g.moveTo(0,y); for(let x=0;x<=256;x+=32) g.lineTo(x, y + Math.sin(x*0.05+i)*2.5); g.stroke();
   }
-});
+  noiseFill(g,256,64,18);
+  return toTex(c);
+})();
 
-// 蒸気スプライト
-const steamTex = canvasTex(64, (g,s)=>{
-  const r = g.createRadialGradient(s/2,s/2,2, s/2,s/2,s/2);
-  r.addColorStop(0,'rgba(225,235,242,0.55)');
-  r.addColorStop(1,'rgba(225,235,242,0)');
-  g.fillStyle = r; g.fillRect(0,0,s,s);
-});
+const texSoft = (function(){
+  const c = mkCanvas(128,128), g = c.getContext('2d');
+  for(let i=0;i<14;i++){
+    const x = 64+(rnd()-0.5)*40, y = 64+(rnd()-0.5)*40, r = 26+rnd()*30;
+    const gr = g.createRadialGradient(x,y,0,x,y,r);
+    gr.addColorStop(0,'rgba(255,255,255,0.22)'); gr.addColorStop(1,'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(0,0,128,128);
+  }
+  return toTex(c);
+})();
 
+/* =====================================================================
+ * 3. マテリアル
+ * =================================================================== */
+function std(hex, rough, metal, opt){
+  return new THREE.MeshStandardMaterial(Object.assign({ color:lin(hex), roughness:rough, metalness:metal }, opt || {}));
+}
 const M = {
-  steel:      new THREE.MeshStandardMaterial({ color:0x4a5560, roughness:0.62, metalness:0.55 }),
-  steelLight: new THREE.MeshStandardMaterial({ color:0x76828e, roughness:0.5,  metalness:0.6 }),
-  steelDark:  new THREE.MeshStandardMaterial({ color:0x333c45, roughness:0.7,  metalness:0.5 }),
-  refractory: new THREE.MeshStandardMaterial({ color:0x9a8d7c, roughness:0.95, metalness:0.02 }),
-  refraDark:  new THREE.MeshStandardMaterial({ color:0x655a4e, roughness:0.95, metalness:0.02 }),
-  concrete:   new THREE.MeshStandardMaterial({ color:0x53585e, roughness:0.92, metalness:0.05 }),
-  pitWall:    new THREE.MeshStandardMaterial({ color:0x474d54, roughness:0.92, metalness:0.05, transparent:true, opacity:1 }),
-  yellow:     new THREE.MeshStandardMaterial({ color:0xd9a514, roughness:0.6,  metalness:0.2 }),
-  bluePipe:   new THREE.MeshStandardMaterial({ color:0x2e6fb3, roughness:0.45, metalness:0.5 }),
-  cabinet:    new THREE.MeshStandardMaterial({ color:0x46606e, roughness:0.6,  metalness:0.3 }),
-  stripe:     new THREE.MeshStandardMaterial({ map:stripeTex, roughness:0.7 }),
-  melt:       new THREE.MeshBasicMaterial({ map:meltTex, color:0xffaa55, transparent:true, opacity:0 }),
-  water:      new THREE.MeshStandardMaterial({ color:0x1a4a5e, roughness:0.25, metalness:0.1, transparent:true, opacity:0.88 }),
-  glass:      new THREE.MeshStandardMaterial({ color:0x9fd0e8, roughness:0.1, metalness:0.3, transparent:true, opacity:0.45 }),
+  steel:      std(0x5f6a75, 0.5, 0.65),
+  steelDark:  std(0x2c333b, 0.6, 0.6),
+  steelLight: std(0xa6b0ba, 0.32, 0.78),
+  frame:      std(0x46525f, 0.62, 0.45),
+  crane:      std(0xe6aa1e, 0.42, 0.3),
+  charger:    std(0xe0731c, 0.42, 0.3),
+  furnace:    std(0x34435a, 0.52, 0.5),
+  trim:       std(0x222a33, 0.6, 0.5),
+  castable:   std(0xb7aa96, 0.95, 0.0),
+  concreteW:  std(0xc9ccd0, 0.93, 0.02, { map:texConcrete }),
+  floor:      std(0xffffff, 0.86, 0.04, { map:texConcrete }),
+  ground:     std(0x24272a, 0.96, 0.0),
+  pitWall:    std(0x5d636a, 0.9, 0.05, { transparent:true, opacity:1 }),
+  pipeBlue:   std(0x2f6fb5, 0.38, 0.5),
+  pipeRed:    std(0xb3362a, 0.45, 0.4),
+  pipeGreen:  std(0x3d8a58, 0.45, 0.4),
+  cabinet:    std(0x4d6a78, 0.5, 0.35),
+  panel:      std(0xc3c9cf, 0.5, 0.3),
+  rubber:     std(0x17191c, 0.85, 0.0),
+  glass:      std(0x8cc2dc, 0.05, 0.1, { transparent:true, opacity:0.3 }),
+  wood:       std(0xffffff, 0.8, 0.0, { map:texWood }),
+  wall:       std(0xffffff, 0.62, 0.35, { map:texCorr }),
+  stripe:     std(0xffffff, 0.6, 0.1, { map:texStripe }),
+  yellow:     std(0xdcb01e, 0.5, 0.2),
+  graphite:   std(0x1c1e22, 0.5, 0.3),
+  fabric:     std(0xe3dcc8, 0.95, 0.0),
+  dross:      std(0x4d4944, 0.95, 0.15),
+  water:      std(0x173f50, 0.1, 0.2, { transparent:true, opacity:0.86 }),
+  alu:        std(0xc9ced4, 0.3, 0.9),
+  lamp:       new THREE.MeshBasicMaterial({ color:new THREE.Color(3.4, 3.2, 2.8), toneMapped:false }),
+  window:     new THREE.MeshBasicMaterial({ color:lin(0x8aa7bd) }),
+  screen:     new THREE.MeshBasicMaterial({ color:new THREE.Color(0.35, 1.1, 1.8), toneMapped:false }),
+  ledRed:     new THREE.MeshBasicMaterial({ color:new THREE.Color(3, 0.2, 0.1), toneMapped:false }),
+  ledGreen:   new THREE.MeshBasicMaterial({ color:new THREE.Color(0.2, 2.4, 0.6), toneMapped:false }),
+  beacon:     new THREE.MeshBasicMaterial({ color:new THREE.Color(3, 1.3, 0.1), toneMapped:false }),
+  stream:     new THREE.MeshBasicMaterial({ color:new THREE.Color(2.6, 1.05, 0.3), toneMapped:false }),
 };
+// 炉内耐火物（温度に応じて自発光）
+M.mfRefr = std(0xffffff, 0.92, 0.0, { map:texBrick, emissive:lin(0xff5418), emissiveMap:texBrick, emissiveIntensity:0.3 });
+M.hfRefr = std(0xffffff, 0.92, 0.0, { map:texBrick, emissive:lin(0xff5418), emissiveMap:texBrick, emissiveIntensity:0.25 });
+M.refr   = std(0xe6ddd2, 0.92, 0.0, { map:texBrick });
+M.peepMF = new THREE.MeshBasicMaterial({ color:new THREE.Color(2, 0.7, 0.15), toneMapped:false });
+M.peepHF = new THREE.MeshBasicMaterial({ color:new THREE.Color(2, 0.7, 0.15), toneMapped:false });
+// ワールド座標 UV（テクスチャの縮尺を統一）
+M.mfRefr.userData.worldUV = 1; M.hfRefr.userData.worldUV = 1; M.refr.userData.worldUV = 1;
+M.concreteW.userData.worldUV = 1/6; M.wall.userData.worldUV = 1; M.wood.userData.worldUV = 1;
 
-const G = {
-  box: (w,h,d)=> new THREE.BoxGeometry(w,h,d),
-  cyl: (rt,rb,h,seg)=> new THREE.CylinderGeometry(rt,rb,h,seg||16),
+// スクラップ（インスタンス色：R=加熱度, G=明度）
+M.scrap = std(0xbcc3ca, 0.42, 0.85);
+M.scrap.onBeforeCompile = sh=>{
+  sh.fragmentShader = sh.fragmentShader
+    .replace('#include <color_fragment>', `
+      #ifdef USE_COLOR
+        float heat = vColor.r;
+        diffuseColor.rgb *= vColor.g;
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.10,0.035,0.02), clamp(heat*1.3,0.0,1.0));
+      #endif`)
+    .replace('#include <emissivemap_fragment>', `
+      #include <emissivemap_fragment>
+      #ifdef USE_COLOR
+        totalEmissiveRadiance += mix(vec3(0.9,0.12,0.02), vec3(1.0,0.55,0.12), vColor.r) * pow(vColor.r,1.4) * 3.0;
+      #endif`);
 };
+M.scrap.customProgramCacheKey = ()=> 'scrapHeat';
 
-function mesh(geo, mat, x,y,z, opt){
+// 共通ノイズ（GLSL）
+const NOISE_GLSL = `
+  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+  float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f*f*(3.0-2.0*f);
+    return mix(mix(hash(i), hash(i+vec2(1.0,0.0)), u.x), mix(hash(i+vec2(0.0,1.0)), hash(i+vec2(1.0,1.0)), u.x), u.y); }
+  float fbm(vec2 p){ float v = 0.0, a = 0.5; for(int i=0;i<4;i++){ v += a*vnoise(p); p = p*2.03 + 1.7; a *= 0.5; } return v; }
+`;
+
+// 溶湯面シェーダー（流れ・酸化皮膜・攪拌渦・充填フロント）
+const MELTS = [];
+function makeMelt(o){
+  o = o || {};
+  const u = {
+    uTime:{value:0}, uFlow:{value:new THREE.Vector2(o.fx||0, o.fz||0)}, uGlow:{value:o.glow||1.0},
+    uSkin:{value:o.skin!==undefined ? o.skin : 0.25}, uSwirl:{value:0}, uCenter:{value:new THREE.Vector2(o.cx||0, o.cz||0)},
+    uFillA:{value:0}, uFillB:{value:1}, uScale:{value:o.scale||1.4},
+  };
+  const mat = new THREE.ShaderMaterial({
+    uniforms:u,
+    vertexShader:`varying vec2 vUv; varying vec3 vW;
+      void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: NOISE_GLSL + `
+      uniform float uTime, uGlow, uSkin, uSwirl, uFillA, uFillB, uScale; uniform vec2 uFlow, uCenter;
+      varying vec2 vUv; varying vec3 vW;
+      void main(){
+        if(vUv.x < uFillA || vUv.x > uFillB) discard;
+        vec2 d = vW.xz - uCenter;
+        float ang = uSwirl / (0.7 + length(d)*0.5);
+        float cs = cos(ang), sn = sin(ang);
+        vec2 p = (uCenter + vec2(cs*d.x - sn*d.y, sn*d.x + cs*d.y)) * uScale - uFlow * uTime;
+        float n = fbm(p);
+        float n2 = fbm(p*2.6 + vec2(3.1,7.7) + uFlow*uTime*0.55);
+        vec3 hot = vec3(1.0, 0.33, 0.055);
+        vec3 bright = vec3(1.0, 0.70, 0.34);
+        vec3 c = mix(hot, bright, smoothstep(0.42, 0.82, n)) * uGlow;
+        float skin = smoothstep(0.50, 0.64, n2 + uSkin*0.42 - 0.12) * uSkin;
+        vec3 sk = vec3(0.40, 0.385, 0.37) * (0.5 + 0.55*n) + c*0.10;
+        c = mix(c, sk, clamp(skin, 0.0, 0.96));
+        float ea = uFillA > 0.001 ? smoothstep(0.0, 0.03, vUv.x - uFillA) : 1.0;
+        float eb = uFillB < 0.999 ? smoothstep(0.0, 0.03, uFillB - vUv.x) : 1.0;
+        c *= mix(0.45, 1.0, ea*eb);
+        gl_FragColor = linearToOutputTexel(vec4(c, 1.0));
+      }`
+  });
+  mat.toneMapped = false;
+  MELTS.push(u);
+  return { mat, u };
+}
+
+// バーナー火炎シェーダー
+const FLAMES = [];
+function makeFlameMat(){
+  const u = { uTime:{value:0}, uPower:{value:1} };
+  const mat = new THREE.ShaderMaterial({
+    uniforms:u, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+    vertexShader:`varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+      void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: NOISE_GLSL + `
+      uniform float uTime, uPower; varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+      void main(){
+        float t = vUv.y;
+        float n = fbm(vec2(vUv.x*7.0, t*3.5 - uTime*4.0));
+        float core = pow(1.0 - t, 1.3);
+        float fres = pow(abs(dot(normalize(vN), normalize(vV))), 1.6);
+        float a = core * fres * (0.45 + 0.75*n) * uPower;
+        vec3 c = mix(vec3(1.0,0.30,0.04), vec3(1.0,0.78,0.42), core*core);
+        c = mix(c, vec3(0.45,0.6,1.0), smoothstep(0.93, 1.0, 1.0 - t) * 0.6);
+        gl_FragColor = linearToOutputTexel(vec4(c * a * 1.9, 1.0));
+      }`
+  });
+  mat.toneMapped = false;
+  FLAMES.push(u);
+  return mat;
+}
+
+// スラブ用：アルミ地肌 + 湯面からの距離で赤熱（ShaderChunk 差込み）
+function makeSlabMaterial(){
+  const u = { uLen:{value:1}, uHot:{value:0} };
+  const m = new THREE.MeshStandardMaterial({ color:lin(0xc3c9cf), roughness:0.36, metalness:0.88 });
+  m.onBeforeCompile = sh=>{
+    sh.uniforms.uLen = u.uLen; sh.uniforms.uHot = u.uHot;
+    sh.vertexShader = 'varying vec3 vLoc;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vLoc = position;');
+    sh.fragmentShader = 'uniform float uLen; uniform float uHot; varying vec3 vLoc;\n' + sh.fragmentShader
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        float dTop = (1.0 - vLoc.y) * uLen;
+        diffuseColor.rgb *= 0.9 + 0.1 * (0.5 + 0.5*sin(dTop * 46.0));`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        float h = uHot * exp(-dTop / 0.24);
+        vec3 hc = mix(vec3(0.55,0.04,0.0), vec3(1.0,0.42,0.07), clamp(h*1.5,0.0,1.0));
+        hc = mix(hc, vec3(1.0,0.82,0.5), clamp(h*h - 0.45, 0.0, 1.0));
+        totalEmissiveRadiance += hc * h * 3.2;`);
+  };
+  m.customProgramCacheKey = ()=> 'slabHot';
+  return { m, u };
+}
+
+/* =====================================================================
+ * 4. ジオメトリ補助・静的メッシュ統合（ドローコール削減）
+ * =================================================================== */
+function add(p, geo, mat, x,y,z, rx,ry,rz){
   const m = new THREE.Mesh(geo, mat);
   m.position.set(x||0, y||0, z||0);
-  if(!opt || !opt.noShadow){ m.castShadow = true; m.receiveShadow = true; }
+  if(rx || ry || rz) m.rotation.set(rx||0, ry||0, rz||0);
+  m.castShadow = true; m.receiveShadow = true;
+  p.add(m);
   return m;
 }
-// 回転指定付き（Group.add() は this を返すため、回転は生成時に確定させる）
-function meshRot(geo, mat, x,y,z, rx,rz){
-  const m = mesh(geo, mat, x,y,z);
-  if(rx) m.rotation.x = rx;
-  if(rz) m.rotation.z = rz;
+const addBox = (p, w,h,d, mat, x,y,z, rx,ry,rz)=> add(p, new THREE.BoxGeometry(w,h,d), mat, x,y,z, rx,ry,rz);
+const addCyl = (p, r, h, mat, x,y,z, rx,ry,rz, seg)=> add(p, new THREE.CylinderGeometry(r,r,h,seg||16), mat, x,y,z, rx,ry,rz);
+function strut(p, a, b, w, mat, d){
+  const len = a.distanceTo(b);
+  const m = add(p, new THREE.BoxGeometry(w, len, d||w), mat);
+  m.position.copy(a).add(b).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(UP, _v1.copy(b).sub(a).normalize());
   return m;
 }
+function pipe(p, pts, r, mat){
+  for(let i=0;i<pts.length-1;i++){
+    const a = pts[i], b = pts[i+1], len = a.distanceTo(b);
+    const m = add(p, new THREE.CylinderGeometry(r, r, len, 12), mat);
+    m.position.copy(a).add(b).multiplyScalar(0.5);
+    m.quaternion.setFromUnitVectors(UP, _v1.copy(b).sub(a).normalize());
+    if(i>0) add(p, new THREE.SphereGeometry(r*1.02, 12, 8), mat, a.x, a.y, a.z);
+  }
+}
+// 2点間に単位長ジオメトリを配置（動的シリンダー用）
+function orientBetween(mesh, a, b){
+  const len = a.distanceTo(b);
+  mesh.position.copy(a).add(b).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(UP, _v3.copy(b).sub(a).normalize());
+  mesh.scale.set(1, Math.max(0.001, len), 1);
+}
+
+function worldUV(geo, s){
+  const p = geo.attributes.position, n = geo.attributes.normal, uv = geo.attributes.uv;
+  if(!uv || !n) return;
+  for(let i=0;i<p.count;i++){
+    const ax = Math.abs(n.getX(i)), ay = Math.abs(n.getY(i)), az = Math.abs(n.getZ(i));
+    let u, v;
+    if(ax >= ay && ax >= az){ u = p.getZ(i); v = p.getY(i); }
+    else if(ay >= az){ u = p.getX(i); v = p.getZ(i); }
+    else { u = p.getX(i); v = p.getY(i); }
+    uv.setXY(i, u*s, v*s);
+  }
+}
+function mergeGeos(list){
+  let nv = 0, ni = 0;
+  for(const g of list){ nv += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; }
+  const pos = new Float32Array(nv*3), nor = new Float32Array(nv*3), uv = new Float32Array(nv*2);
+  const idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
+  let vo = 0, io = 0;
+  for(const g of list){
+    const p = g.attributes.position, n = g.attributes.normal, t = g.attributes.uv, c = p.count;
+    for(let i=0;i<c;i++){
+      const k = (vo+i)*3;
+      pos[k] = p.getX(i); pos[k+1] = p.getY(i); pos[k+2] = p.getZ(i);
+      nor[k] = n.getX(i); nor[k+1] = n.getY(i); nor[k+2] = n.getZ(i);
+      if(t){ uv[(vo+i)*2] = t.getX(i); uv[(vo+i)*2+1] = t.getY(i); }
+    }
+    if(g.index){ const a = g.index.array; for(let i=0;i<g.index.count;i++) idx[io+i] = a[i] + vo; io += g.index.count; }
+    else { for(let i=0;i<c;i++) idx[io+i] = vo+i; io += c; }
+    vo += c;
+  }
+  const m = new THREE.BufferGeometry();
+  m.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  m.setAttribute('normal', new THREE.BufferAttribute(nor,3));
+  m.setAttribute('uv', new THREE.BufferAttribute(uv,2));
+  m.setIndex(new THREE.BufferAttribute(idx,1));
+  m.computeBoundingSphere();
+  return m;
+}
+function collect(root, store){
+  root.updateMatrixWorld(true);
+  const list = [];
+  root.traverse(o=>{ if(o.isMesh && !o.userData.dyn) list.push(o); });
+  for(const o of list){
+    const geo = o.geometry.clone().applyMatrix4(o.matrixWorld);
+    const s = o.material.userData.worldUV; if(s) worldUV(geo, s);
+    const key = o.material.uuid + (o.castShadow ? '|c' : '|n');
+    let b = store.get(key);
+    if(!b){ b = { mat:o.material, cast:o.castShadow, geos:[] }; store.set(key, b); }
+    b.geos.push(geo);
+    o.parent.remove(o);
+  }
+  if(root.parent && !root.children.length) root.parent.remove(root);
+}
+function flush(store, parent){
+  store.forEach(b=>{
+    const m = new THREE.Mesh(mergeGeos(b.geos), b.mat);
+    m.castShadow = b.cast; m.receiveShadow = true;
+    parent.add(m);
+    b.geos.forEach(g=> g.dispose());
+  });
+  store.clear();
+}
+const STATIC = new Map();
+const bakeStatic = root => collect(root, STATIC);                          // 全体静的（最後に一括統合）
+function bakeLocal(root, dst){ const st = new Map(); collect(root, st); flush(st, dst); }  // 可動部内で統合
+const dyn = m => { m.userData.dyn = true; return m; };
 
 /* =====================================================================
- * 建屋・床・ピット
+ * 5. レイアウト定数（単位 m、床面 y=0）
  * =================================================================== */
-const PIT = { x1:-3, x2:3, z1:-2.5, z2:2.5, depth:7.5, waterY:-7.0 };
+const BLD   = { x1:-68, x2:24, z1:-16, z2:16, colXs:[-66,-55,-44,-33,-22,-11,0,11,22], colZ:15.6, h:16, runY:11.5 };
+const PIT   = { x1:-3.4, x2:3.4, z1:-3.2, z2:3.2, depth:9.0, waterY:-8.55 };
+const SLAB  = { W:1.6, T:0.55 };
+const TPM   = SLAB.W * SLAB.T * 2.7;          // スラブ 1m あたり重量 [t]
+const MOLD_Z = [-1.5, 0, 1.5];
+const MENISCUS = 0.95, BLOCK_START = 0.62, HEAD_LOW = 0.18, HEAD_PICK = 1.8, PIN_OFF = 0.68;
+const TABLE = { hx:3.55, hy:0.3, maxTilt:80*DEG };
+const YARD  = { zp:5.6, padY:0.18, slotX:[2.6, 0, -2.6] };
+const MF = { x:-46, z:0, hx:4.5, hz:3.5, wt:0.9, y0:1.45, y1:5.9, hearth:1.85, lvl0:2.25, lvl1:3.0, cap:68, heel:12,
+             doorW:3.6, sill:3.2, doorTop:5.0 };
+const HF = { x:-30, z:0, hx:3.75, hz:3.0, wt:0.8, y0:0.7, y1:4.4, hearth:1.1, lvl0:1.45, lvl1:2.1, cap:60, heel:6,
+             doorW:2.6, sill:2.3, doorTop:3.5 };
+const CR = { railY:12.12, safeY:10.6, travelY:4.7, parkX:12, vx:4.0, vz:3.0, vy:2.4, vyL:1.5, vySlow:0.8 };
+const CAST_K = 150;                            // 鋳造の時間圧縮率（表示上）
+const FRONT_V = 5.5;                           // 樋の充填フロント速度 [m/s]
+const P_PARK = {x:-46, z:12.5}, P_DOOR = {x:-46, z:5.9}, P_BIN0 = {x:-50, z:8}, P_BIN1 = {x:-52.4, z:8}, P_DROSS = {x:-44.4, z:8};
 
-// 床（ピット開口をくり抜いたシェイプ）
+const mfLevel = liq => MF.lvl0 + (liq - MF.heel)/(MF.cap - MF.heel) * (MF.lvl1 - MF.lvl0);
+const hfLevel = m => HF.lvl0 + (m - HF.heel)/(HF.cap - HF.heel) * (HF.lvl1 - HF.lvl0);
+
+/* =====================================================================
+ * 6. 建屋・床
+ * =================================================================== */
+function rectPath(path, x1, y1, x2, y2){ path.moveTo(x1,y1); path.lineTo(x2,y1); path.lineTo(x2,y2); path.lineTo(x1,y2); path.closePath(); }
+
 (function buildFloor(){
-  const shape = new THREE.Shape();
-  shape.moveTo(-48,-26); shape.lineTo(34,-26); shape.lineTo(34,26); shape.lineTo(-48,26); shape.closePath();
-  const hole = new THREE.Path();
-  hole.moveTo(PIT.x1, PIT.z1); hole.lineTo(PIT.x2, PIT.z1);
-  hole.lineTo(PIT.x2, PIT.z2); hole.lineTo(PIT.x1, PIT.z2); hole.closePath();
-  shape.holes.push(hole);
-  const geo = new THREE.ShapeGeometry(shape);
-  const floor = new THREE.Mesh(geo, M.concrete);
-  floor.rotation.x = -Math.PI/2;
-  floor.receiveShadow = true;
-  scene.add(floor);
+  // 屋外地面（建屋部分をくり抜き）
+  const gs = new THREE.Shape(); rectPath(gs, -220, -170, 220, 170);
+  const gh = new THREE.Path(); rectPath(gh, BLD.x1-0.2, BLD.z1-0.2, BLD.x2+0.2, BLD.z2+0.2); gs.holes.push(gh);
+  const ground = new THREE.Mesh(new THREE.ShapeGeometry(gs), M.ground);
+  ground.rotation.x = -Math.PI/2; ground.position.y = -0.02; ground.receiveShadow = true; scene.add(ground);
+
+  // 建屋床（ピット開口をくり抜き。Shape の y は world の -z）
+  const fs = new THREE.Shape(); rectPath(fs, BLD.x1-0.2, BLD.z1-0.2, BLD.x2+0.2, BLD.z2+0.2);
+  const fh = new THREE.Path(); rectPath(fh, PIT.x1, -PIT.z2, PIT.x2, -PIT.z1); fs.holes.push(fh);
+  const fg = new THREE.ShapeGeometry(fs);
+  const uv = fg.attributes.uv; for(let i=0;i<uv.count;i++) uv.setXY(i, uv.getX(i)/6, uv.getY(i)/6);
+  const floor = new THREE.Mesh(fg, M.floor);
+  floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
+
+  // 床ペイント（通路・置場・危険表示）
+  const PPM = 24, W = (BLD.x2-BLD.x1)*PPM, H = (BLD.z2-BLD.z1)*PPM;
+  const c = mkCanvas(W, H), g = c.getContext('2d');
+  const X = x => (x - BLD.x1)*PPM, Z = z => (z - BLD.z1)*PPM;
+  const rectF = (x1,z1,x2,z2,col)=>{ g.fillStyle = col; g.fillRect(X(x1), Z(z1), (x2-x1)*PPM, (z2-z1)*PPM); };
+  const rectL = (x1,z1,x2,z2,w,col,dash)=>{ g.save(); g.strokeStyle = col; g.lineWidth = w*PPM; if(dash) g.setLineDash(dash.map(d=>d*PPM));
+    g.strokeRect(X(x1), Z(z1), (x2-x1)*PPM, (z2-z1)*PPM); g.restore(); };
+  const lineZ = (x1,x2,z,w,col,dash)=>{ g.save(); g.strokeStyle = col; g.lineWidth = w*PPM; if(dash) g.setLineDash(dash.map(d=>d*PPM));
+    g.beginPath(); g.moveTo(X(x1),Z(z)); g.lineTo(X(x2),Z(z)); g.stroke(); g.restore(); };
+  const hatch = (x1,z1,x2,z2,colA,colB,step)=>{
+    g.save(); g.beginPath(); g.rect(X(x1),Z(z1),(x2-x1)*PPM,(z2-z1)*PPM); g.clip();
+    g.fillStyle = colA; g.fillRect(X(x1),Z(z1),(x2-x1)*PPM,(z2-z1)*PPM);
+    g.strokeStyle = colB; g.lineWidth = step*PPM*0.5;
+    const s = step*PPM, L = (x2-x1+z2-z1)*PPM;
+    for(let d=-L; d<L; d+=s){ g.beginPath(); g.moveTo(X(x1)+d, Z(z2)); g.lineTo(X(x1)+d+(z2-z1)*PPM, Z(z1)); g.stroke(); }
+    g.restore(); };
+  const text = (s,x,z,size,col,align)=>{ g.save(); g.fillStyle = col; g.font = `700 ${size*PPM}px "Yu Gothic","Hiragino Sans","Meiryo","IPAGothic",sans-serif`;
+    g.textAlign = align||'center'; g.textBaseline = 'middle'; g.fillText(s, X(x), Z(z)); g.restore(); };
+  const arrow = (x,z,col)=>{ g.save(); g.fillStyle = col; g.translate(X(x),Z(z)); g.beginPath();
+    g.moveTo(-1.2*PPM,-0.35*PPM); g.lineTo(0.2*PPM,-0.35*PPM); g.lineTo(0.2*PPM,-0.7*PPM); g.lineTo(1.2*PPM,0);
+    g.lineTo(0.2*PPM,0.7*PPM); g.lineTo(0.2*PPM,0.35*PPM); g.lineTo(-1.2*PPM,0.35*PPM); g.closePath(); g.fill(); g.restore(); };
+
+  // 歩行者通路（奥）
+  rectF(BLD.x1+1, -13.8, BLD.x2-1, -12.0, 'rgba(62,150,96,0.42)');
+  lineZ(BLD.x1+1, BLD.x2-1, -13.8, 0.1, 'rgba(235,240,240,0.85)');
+  lineZ(BLD.x1+1, BLD.x2-1, -12.0, 0.1, 'rgba(235,240,240,0.85)');
+  for(let x=-60; x<20; x+=16) text('歩行者通路', x, -12.9, 0.7, 'rgba(235,245,240,0.85)');
+  // 主通路（手前）とスラブ置場
+  rectF(-38, 4.6, BLD.x2-0.5, 13.6, 'rgba(70,150,100,0.12)');
+  lineZ(-38, BLD.x2-0.5, 4.6, 0.15, 'rgba(232,194,48,0.95)');
+  lineZ(-38, BLD.x2-0.5, 13.6, 0.15, 'rgba(232,194,48,0.95)');
+  [-32, -22, -12, 11, 19].forEach(x=>{ arrow(x, 9.1, 'rgba(238,240,236,0.55)'); });
+  [-27, -17, 15].forEach(x=> text('通 路', x, 11.6, 0.8, 'rgba(238,240,236,0.6)'));
+  rectF(-4.5, 5.0, 4.5, 13.3, 'rgba(18,22,26,0.35)');
+  rectL(-4.5, 5.0, 4.5, 13.3, 0.12, 'rgba(240,242,244,0.9)');
+  [[-4.5,5.0],[4.5,5.0],[-4.5,13.3],[4.5,13.3]].forEach(([x,z])=>{ g.fillStyle='rgba(232,194,48,1)'; g.fillRect(X(x)-0.25*PPM, Z(z)-0.25*PPM, 0.5*PPM, 0.5*PPM); });
+  text('スラブ置場', 0, 13.0, 0.42, 'rgba(240,242,244,0.95)');
+  // 鋳造ピット周囲の危険帯
+  const pb = 0.6;
+  hatch(PIT.x1-pb, PIT.z1-pb, PIT.x2+pb, PIT.z1, '#d9a514', '#15181c', 0.5);
+  hatch(PIT.x1-pb, PIT.z2, PIT.x2+pb, PIT.z2+pb, '#d9a514', '#15181c', 0.5);
+  hatch(PIT.x1-pb, PIT.z1, PIT.x1, PIT.z2, '#d9a514', '#15181c', 0.5);
+  hatch(PIT.x2, PIT.z1, PIT.x2+pb, PIT.z2, '#d9a514', '#15181c', 0.5);
+  text('鋳造ピット　立入禁止', 0, -4.7, 0.5, 'rgba(240,110,80,0.95)');
+  rectL(PIT.x2+0.7, -4.4, 7.4, 4.4, 0.1, 'rgba(232,194,48,0.9)', [0.5,0.35]);
+  text('傾動エリア', 5.6, -3.9, 0.36, 'rgba(232,194,48,0.95)');
+  // 高温注意（移湯樋・出湯口の下）
+  hatch(-41.2, -1.1, -33.9, 1.1, 'rgba(200,60,40,0.55)', 'rgba(240,240,240,0.35)', 0.6);
+  hatch(-26.1, -1.1, -21.4, 1.1, 'rgba(200,60,40,0.55)', 'rgba(240,240,240,0.35)', 0.6);
+  text('高温注意', -37.5, -1.7, 0.45, 'rgba(240,110,80,0.95)');
+  // 装入機作業エリア・スクラップヤード
+  rectL(-63.2, 4.2, -36.6, 15.0, 0.12, 'rgba(235,130,40,0.9)', [0.7,0.45]);
+  text('装入機作業エリア', -40.5, 14.4, 0.42, 'rgba(235,140,60,0.95)');
+  text('スクラップヤード', -59.2, 12.5, 0.45, 'rgba(235,240,240,0.8)');
+  text('ドロス', -38.5, 9.6, 0.34, 'rgba(235,240,240,0.7)');
+
+  const t = toTex(c); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+  const dm = new THREE.MeshStandardMaterial({ map:t, transparent:true, roughness:0.75, metalness:0.0, depthWrite:false,
+    polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2 });
+  const decal = new THREE.Mesh(new THREE.PlaneGeometry(BLD.x2-BLD.x1, BLD.z2-BLD.z1), dm);
+  decal.rotation.x = -Math.PI/2;
+  decal.position.set((BLD.x1+BLD.x2)/2, 0.004, (BLD.z1+BLD.z2)/2);
+  decal.receiveShadow = true; decal.renderOrder = -1;
+  scene.add(decal);
 })();
 
-// ピット躯体（内壁4面 + 底盤）— 透過トグル対象
-(function buildPit(){
-  const t = 0.5, D = PIT.depth;
-  const w = PIT.x2-PIT.x1, d = PIT.z2-PIT.z1;
-  const g = new THREE.Group();
-  g.add(mesh(G.box(w+t*2, D, t), M.pitWall, 0, -D/2, PIT.z1 - t/2));
-  g.add(mesh(G.box(w+t*2, D, t), M.pitWall, 0, -D/2, PIT.z2 + t/2));
-  g.add(mesh(G.box(t, D, d), M.pitWall, PIT.x1 - t/2, -D/2, 0));
-  g.add(mesh(G.box(t, D, d), M.pitWall, PIT.x2 + t/2, -D/2, 0));
-  g.add(mesh(G.box(w+t*2, 0.5, d+t*2), M.pitWall, 0, -D-0.25, 0));
-  scene.add(g);
+function hColumn(p, x, z, h, s){
+  s = s || 0.6;
+  addBox(p, s, h, 0.05, M.frame, x, h/2, z - s*0.45);
+  addBox(p, s, h, 0.05, M.frame, x, h/2, z + s*0.45);
+  addBox(p, 0.05, h, s*0.9, M.frame, x, h/2, z);
+}
 
-  // ピット内冷却水面
-  const water = mesh(new THREE.PlaneGeometry(w-0.1, d-0.1), M.water, 0, PIT.waterY, 0, {noShadow:true});
-  water.rotation.x = -Math.PI/2;
-  water.receiveShadow = true;
-  scene.add(water);
-
-  // 開口縁の危険表示帯
-  const sw = 0.3;
-  scene.add(mesh(G.box(w+sw*2, 0.05, sw), M.stripe, 0, 0.026, PIT.z1-sw/2));
-  scene.add(mesh(G.box(w+sw*2, 0.05, sw), M.stripe, 0, 0.026, PIT.z2+sw/2));
-  scene.add(mesh(G.box(sw, 0.05, d), M.stripe, PIT.x1-sw/2, 0.026, 0));
-  scene.add(mesh(G.box(sw, 0.05, d), M.stripe, PIT.x2+sw/2, 0.026, 0));
-
-  // 手すり（z両側）
-  [PIT.z1-0.55, PIT.z2+0.55].forEach(z=>{
-    for(let x=PIT.x1; x<=PIT.x2; x+=2){
-      scene.add(mesh(G.cyl(0.03,0.03,1.05,8), M.yellow, x, 0.52, z));
-    }
-    scene.add(mesh(G.box(PIT.x2-PIT.x1, 0.05, 0.05), M.yellow, 0, 1.05, z));
-    scene.add(mesh(G.box(PIT.x2-PIT.x1, 0.04, 0.04), M.yellow, 0, 0.62, z));
-  });
-})();
-
-// 建屋（柱・クレーンレール・屋根梁）
 (function buildBuilding(){
-  const colXs = [-32, -22, -12, -2, 8, 16];
-  colXs.forEach(x=>{
-    [-11, 11].forEach(z=>{
-      scene.add(mesh(G.box(0.55, 9, 0.55), M.steelDark, x, 4.5, z));
+  const g = new THREE.Group(); scene.add(g);
+  const H = BLD.h, L = BLD.x2 - BLD.x1, cx = (BLD.x1 + BLD.x2)/2;
+  const roofY = z => H + 2.6*(1 - Math.abs(z)/16.2);
+  BLD.colXs.forEach(x=>{
+    [-BLD.colZ, BLD.colZ].forEach(z=>{
+      hColumn(g, x, z, H);
+      addBox(g, 0.5, 0.7, 1.0, M.frame, x, BLD.runY - 0.85, z - Math.sign(z)*0.75);
     });
-    scene.add(mesh(G.box(0.35, 0.7, 22.6), M.steelDark, x, 9.3, 0));
-  });
-  // クレーンレール（x方向）
-  [-10.5, 10.5].forEach(z=>{
-    scene.add(mesh(G.box(50, 0.45, 0.45), M.steel, -8, 8.6, z));
-  });
-})();
-
-// 天井クレーン
-const crane = new THREE.Group();
-(function buildCrane(){
-  const girder = mesh(G.box(1.0, 0.9, 21.6), M.yellow, 0, 9.3, 0);
-  crane.add(girder);
-  const trolley = mesh(G.box(1.5, 0.7, 1.6), M.steel, 0, 8.55, 0);
-  crane.userData.trolley = trolley;
-  crane.add(trolley);
-  const hook = mesh(G.box(0.3, 1.4, 0.3), M.steelDark, 0, 7.4, 0);
-  trolley.add(hook); hook.position.set(0, -1.05, 0);
-  crane.position.x = -16;
-  scene.add(crane);
-})();
-
-/* =====================================================================
- * 保持炉
- * =================================================================== */
-(function buildFurnace(){
-  const g = new THREE.Group();
-  g.position.set(-28, 0, 0);
-
-  g.add(mesh(G.box(6.2, 3.6, 5.2), M.steel, 0, 1.8, 0));                 // 炉体
-  g.add(mesh(G.box(6.4, 0.4, 5.4), M.steelDark, 0, 0.2, 0));             // 基礎フレーム
-  g.add(mesh(G.box(5.9, 0.35, 4.9), M.refractory, 0, 3.78, 0));          // 天井断熱
-  // 炉前扉（耐火物）と昇降フレーム
-  g.add(mesh(G.box(2.4, 2.0, 0.25), M.refractory, 1.2, 1.7, 2.72));
-  g.add(mesh(G.box(0.18, 4.6, 0.18), M.steelDark, 0.0, 2.3, 2.95));
-  g.add(mesh(G.box(0.18, 4.6, 0.18), M.steelDark, 2.4, 2.3, 2.95));
-  g.add(mesh(G.box(2.6, 0.25, 0.25), M.steelDark, 1.2, 4.5, 2.95));
-  // バーナー・排気煙突
-  g.add(meshRot(G.cyl(0.28, 0.28, 1.6, 14), M.steelLight, -3.4, 2.3, -1.2, 0, Math.PI/2));
-  g.add(mesh(G.cyl(0.45, 0.5, 5.0, 14), M.steelDark, -1.8, 6.4, -1.6));
-  g.add(mesh(G.cyl(0.6, 0.45, 0.5, 14), M.steelDark, -1.8, 9.0, -1.6));
-  // 出湯口（タップブロック）→ 樋接続
-  const tap = mesh(G.box(1.4, 0.9, 1.0), M.refraDark, 3.55, 1.0, 0);
-  g.add(tap);
-  // 炉前グロー（出湯口の発光）
-  const glow = mesh(G.box(0.5, 0.3, 0.55), M.melt, 3.6, 1.15, 0, {noShadow:true});
-  g.add(glow);
-  // 操作架台・階段
-  g.add(mesh(G.box(2.0, 0.1, 1.4), M.steelLight, 1.2, 2.9, 3.6));
-  for(let i=0;i<6;i++) g.add(mesh(G.box(0.9, 0.07, 0.3), M.steelLight, 2.9, 0.45*i+0.3, 3.5+i*0.32));
-  scene.add(g);
-})();
-
-/* =====================================================================
- * 樋（ランダー）・溶湯処理設備
- * =================================================================== */
-const meltStrips = [];   // 溶湯表面（共有マテリアル M.melt）
-
-// U字樋を生成（axis: 'x' or 'z'）
-function makeLaunder(cx, cz, len, axis){
-  const g = new THREE.Group();
-  const W = 0.62, H = 0.5, wallT = 0.12, baseY = 0.78;
-  const along = (w,h,d)=> axis==='x' ? G.box(len,h,d) : G.box(d,h,len);
-  // 側壁・底（耐火物張り鋼製樋）
-  const sOff = (W-wallT)/2;
-  if(axis==='x'){
-    g.add(mesh(along(len,H,wallT), M.refractory, cx, baseY+H/2, cz-sOff));
-    g.add(mesh(along(len,H,wallT), M.refractory, cx, baseY+H/2, cz+sOff));
-    g.add(mesh(G.box(len, 0.12, W), M.steel, cx, baseY, cz));
-  }else{
-    g.add(mesh(G.box(wallT,H,len), M.refractory, cx-sOff, baseY+H/2, cz));
-    g.add(mesh(G.box(wallT,H,len), M.refractory, cx+sOff, baseY+H/2, cz));
-    g.add(mesh(G.box(W, 0.12, len), M.steel, cx, baseY, cz));
-  }
-  // 溶湯表面
-  const innerW = W - wallT*2 - 0.02;
-  const strip = mesh(
-    axis==='x' ? new THREE.PlaneGeometry(len-0.05, innerW) : new THREE.PlaneGeometry(innerW, len-0.05),
-    M.melt, cx, baseY+0.32, cz, {noShadow:true});
-  strip.rotation.x = -Math.PI/2;
-  g.add(strip);
-  meltStrips.push(strip);
-  // 支持脚
-  const n = Math.max(2, Math.round(len/2.4));
-  for(let i=0;i<n;i++){
-    const t = -len/2 + 0.4 + i*(len-0.8)/Math.max(1,n-1);
-    const px = axis==='x' ? cx+t : cx;
-    const pz = axis==='x' ? cz : cz+t;
-    g.add(mesh(G.box(0.12, baseY, 0.12), M.steelDark, px, baseY/2, pz));
-  }
-  scene.add(g);
-  return g;
-}
-
-makeLaunder(-21.0, 0, 6.8, 'x');   // 炉 → 脱ガス
-makeLaunder(-12.8, 0, 3.2, 'x');   // 脱ガス → フィルター
-makeLaunder( -5.1, 0, 8.2, 'x');   // フィルター → 鋳造テーブル
-
-/* ---- インライン脱ガス装置（回転ローター式） ---- */
-const degasRotors = [];
-(function buildDegasser(){
-  const g = new THREE.Group();
-  g.position.set(-16, 0, 0);
-  g.add(mesh(G.box(3.2, 1.7, 2.3), M.cabinet, 0, 1.15, 0));            // 処理槽
-  g.add(mesh(G.box(3.4, 0.22, 2.5), M.steel, 0, 2.1, 0));              // 蓋
-  g.add(mesh(G.box(3.4, 0.3, 2.5), M.steelDark, 0, 0.15, 0));          // 架台
-  [-0.75, 0.75].forEach(x=>{
-    const shaft = mesh(G.cyl(0.07, 0.07, 1.0, 10), M.steelLight, x, 2.6, 0);
-    g.add(shaft);
-    degasRotors.push(shaft);
-    g.add(mesh(G.box(0.5, 0.55, 0.5), M.cabinet, x, 3.35, 0));         // ローター駆動モーター
-    g.add(meshRot(G.cyl(0.04, 0.04, 0.9, 8), M.steelLight, x, 2.95, 0.5, Math.PI/4, 0)); // ガス配管
-  });
-  // Ar ガスボンベユニット
-  g.add(mesh(G.cyl(0.22, 0.22, 1.5, 12), M.cabinet, -2.1, 0.75, -1.7));
-  g.add(mesh(G.cyl(0.22, 0.22, 1.5, 12), M.cabinet, -1.55, 0.75, -1.7));
-  g.add(mesh(G.box(0.04, 0.04, 1.2), M.steelLight, -1.8, 1.6, -1.1));
-  scene.add(g);
-})();
-
-/* ---- CFF（セラミックフォームフィルター）---- */
-(function buildFilter(){
-  const g = new THREE.Group();
-  g.position.set(-10.2, 0, 0);
-  g.add(mesh(G.box(2.0, 1.35, 1.7), M.cabinet, 0, 1.0, 0));
-  g.add(mesh(G.box(2.15, 0.18, 1.85), M.steel, 0, 1.77, 0));
-  g.add(mesh(G.box(2.1, 0.3, 1.8), M.steelDark, 0, 0.35, 0));
-  [-0.85, 0.85].forEach(x=> g.add(mesh(G.box(0.12, 0.3, 0.5), M.yellow, x, 2.0, 0))); // 吊り耳
-  scene.add(g);
-})();
-
-/* =====================================================================
- * 鋳造テーブル（モールド・分配樋・冷却水系統）
- * =================================================================== */
-const MOLD = { topY:1.15, botY:0.55, meltY:1.0, slabW:1.6, slabT:0.55, z:[ -1.05, 1.05 ] };
-const castTable = new THREE.Group();
-const moldMeltPlanes = [];
-
-(function buildTable(){
-  // テーブル本体フレーム
-  castTable.add(mesh(G.box(4.6, 0.35, 3.6), M.steel, 0, 0.9, 0));
-  // 支持脚（床上 — ピット縁にかかる移動式テーブル）
-  [[-2.1,-1.6],[-2.1,1.6],[2.1,-1.6],[2.1,1.6]].forEach(p=>{
-    castTable.add(mesh(G.box(0.3, 0.75, 0.3), M.steelDark, p[0], 0.38, p[1]));
-  });
-  // 走行レール表現（テーブル退避用）
-  scene.add(mesh(G.box(11, 0.1, 0.22), M.steelDark, 4.2, 0.05, -1.6));
-  scene.add(mesh(G.box(11, 0.1, 0.22), M.steelDark, 4.2, 0.05, 1.6));
-
-  // モールド × 2（水冷鋳型）
-  MOLD.z.forEach(z=>{
-    const outer = mesh(G.box(2.15, 0.6, 1.05), M.steelLight, 0, (MOLD.topY+MOLD.botY)/2, z);
-    castTable.add(outer);
-    // 開口内壁（黒鉛リング表現）
-    castTable.add(mesh(G.box(MOLD.slabW+0.06, 0.58, 0.04), M.steelDark, 0, 0.86, z - MOLD.slabT/2 - 0.03));
-    castTable.add(mesh(G.box(MOLD.slabW+0.06, 0.58, 0.04), M.steelDark, 0, 0.86, z + MOLD.slabT/2 + 0.03));
-    castTable.add(mesh(G.box(0.04, 0.58, MOLD.slabT), M.steelDark, -MOLD.slabW/2-0.03, 0.86, z));
-    castTable.add(mesh(G.box(0.04, 0.58, MOLD.slabT), M.steelDark,  MOLD.slabW/2+0.03, 0.86, z));
-    // 湯面
-    const surf = mesh(new THREE.PlaneGeometry(MOLD.slabW-0.04, MOLD.slabT-0.04), M.melt, 0, MOLD.meltY, z, {noShadow:true});
-    surf.rotation.x = -Math.PI/2;
-    castTable.add(surf);
-    moldMeltPlanes.push(surf);
-  });
-
-  // 分配樋（z方向クロスランダー）と注湯スパウト
-  const cross = new THREE.Group();
-  cross.add(mesh(G.box(0.62, 0.45, 3.3), M.refractory, 0, 1.42, 0));
-  cross.add(mesh(G.box(0.4, 0.02, 3.1), M.melt, 0, 1.58, 0, {noShadow:true}));
-  meltStrips.push(cross.children[1]);
-  MOLD.z.forEach(z=>{
-    cross.add(mesh(G.cyl(0.09, 0.06, 0.45, 10), M.refraDark, 0, 1.1, z)); // スパウト（ノズル）
-    cross.add(mesh(G.cyl(0.16, 0.16, 0.06, 10), M.refractory, 0, 1.06, z)); // フロート
-  });
-  castTable.add(cross);
-
-  // 冷却水マニホールドと給水配管
-  castTable.add(meshRot(G.cyl(0.11, 0.11, 3.4, 12), M.bluePipe, -1.7, 1.3, 0, Math.PI/2, 0));
-  castTable.add(meshRot(G.cyl(0.11, 0.11, 3.4, 12), M.bluePipe,  1.7, 1.3, 0, Math.PI/2, 0));
-  MOLD.z.forEach(z=>{
-    castTable.add(meshRot(G.cyl(0.07, 0.07, 1.3, 10), M.bluePipe, -1.15, 1.1, z, 0, Math.PI/2));
-    castTable.add(meshRot(G.cyl(0.07, 0.07, 1.3, 10), M.bluePipe,  1.15, 1.1, z, 0, Math.PI/2));
-  });
-  // 給水立上り管（床から）
-  castTable.add(mesh(G.cyl(0.12, 0.12, 1.3, 12), M.bluePipe, -1.7, 0.65, -1.7));
-  scene.add(castTable);
-})();
-
-// 制御盤・操作室
-(function buildCabin(){
-  const g = new THREE.Group();
-  g.position.set(4.8, 0, 4.6);
-  g.add(mesh(G.box(3.0, 2.6, 2.2), M.cabinet, 0, 1.3, 0));
-  g.add(mesh(G.box(2.4, 0.9, 0.06), M.glass, 0, 1.7, -1.12));
-  g.add(mesh(G.box(3.2, 0.15, 2.4), M.steelDark, 0, 2.68, 0));
-  scene.add(g);
-  scene.add(mesh(G.box(0.8, 1.6, 0.5), M.cabinet, 2.2, 0.8, 3.2)); // 現場操作盤
-})();
-
-/* =====================================================================
- * 鋳造ピット内：油圧ラム・プラテン・スラブ
- * =================================================================== */
-const ram = new THREE.Group();
-const platen = new THREE.Group();
-(function buildRam(){
-  // 油圧シリンダー外筒（ピット底固定）
-  ram.add(mesh(G.cyl(0.5, 0.55, 1.6, 16), M.steelDark, 0, -PIT.depth+0.8, 0));
-  // ラム（可動ロッド）— 長さはプラテン位置に応じてスケール
-  const rod = mesh(G.cyl(0.32, 0.32, 1, 16), M.steelLight, 0, 0, 0);
-  ram.userData.rod = rod;
-  ram.add(rod);
-  scene.add(ram);
-
-  // プラテン + ボトムブロック（ダミーブロック）
-  platen.add(mesh(G.box(4.0, 0.4, 3.1), M.steel, 0, -0.2, 0));
-  MOLD.z.forEach(z=>{
-    platen.add(mesh(G.box(MOLD.slabW-0.04, 0.3, MOLD.slabT-0.04), M.steelLight, 0, 0.15, z));
-  });
-  scene.add(platen);
-})();
-
-/* ---- スラブ（温度勾配シェーダー） ---- */
-const slabUniforms = {
-  uTopY:    { value: MOLD.meltY },
-  uHot:     { value: 1.0 },
-  uOpacity: { value: 1.0 },
-};
-const slabMat = new THREE.ShaderMaterial({
-  uniforms: slabUniforms,
-  transparent: true,
-  vertexShader: `
-    varying vec3 vW; varying vec3 vN;
-    void main(){
-      vec4 w = modelMatrix * vec4(position, 1.0);
-      vW = w.xyz;
-      vN = normalize(mat3(modelMatrix) * normal);
-      gl_Position = projectionMatrix * viewMatrix * w;
-    }`,
-  fragmentShader: `
-    uniform float uTopY; uniform float uHot; uniform float uOpacity;
-    varying vec3 vW; varying vec3 vN;
-    void main(){
-      float d = uTopY - vW.y;
-      float t = clamp(1.0 - d / 1.9, 0.0, 1.0);
-      t = pow(t, 1.7) * uHot;
-      vec3 lightDir = normalize(vec3(0.45, 0.8, 0.4));
-      float diff = 0.4 + 0.6 * max(dot(normalize(vN), lightDir), 0.0);
-      vec3 solid = vec3(0.70, 0.73, 0.77) * diff;
-      vec3 hot = vec3(1.0, 0.42, 0.07) * 1.45;
-      gl_FragColor = vec4(mix(solid, hot, t), uOpacity);
-    }`,
-});
-const slabs = MOLD.z.map(z=>{
-  const s = new THREE.Mesh(G.box(MOLD.slabW, 1, MOLD.slabT), slabMat);
-  s.position.z = z;
-  s.castShadow = true;
-  scene.add(s);
-  return s;
-});
-
-/* =====================================================================
- * パーティクル：冷却水スプレー / 蒸気
- * =================================================================== */
-const SPRAY_N = 700;
-const sprayGeo = new THREE.BufferGeometry();
-const sprayPos = new Float32Array(SPRAY_N * 3);
-const sprayVel = new Float32Array(SPRAY_N);   // 落下速度
-const sprayLife = new Float32Array(SPRAY_N);
-sprayGeo.setAttribute('position', new THREE.BufferAttribute(sprayPos, 3));
-const sprayMat = new THREE.PointsMaterial({
-  color:0xaadcf5, size:0.055, transparent:true, opacity:0.65,
-  blending:THREE.AdditiveBlending, depthWrite:false,
-});
-const spray = new THREE.Points(sprayGeo, sprayMat);
-spray.frustumCulled = false;
-scene.add(spray);
-
-function respawnDrop(i){
-  // モールド直下のスラブ周面に沿って発生
-  const z0 = MOLD.z[(Math.random()*2)|0];
-  const side = (Math.random()*4)|0;
-  let x, z;
-  if(side < 2){
-    x = (Math.random()-0.5) * MOLD.slabW;
-    z = z0 + (side===0 ? -1 : 1) * (MOLD.slabT/2 + 0.04);
-  }else{
-    x = (side===2 ? -1 : 1) * (MOLD.slabW/2 + 0.04);
-    z = z0 + (Math.random()-0.5) * MOLD.slabT;
-  }
-  sprayPos[i*3] = x; sprayPos[i*3+1] = MOLD.botY - 0.02; sprayPos[i*3+2] = z;
-  sprayVel[i] = 2.2 + Math.random()*1.6;
-  sprayLife[i] = Math.random();
-}
-for(let i=0;i<SPRAY_N;i++){ respawnDrop(i); sprayPos[i*3+1] -= Math.random()*3; }
-
-// 蒸気スプライト
-const steamSprites = [];
-for(let i=0;i<7;i++){
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-    map:steamTex, transparent:true, opacity:0, depthWrite:false }));
-  sp.position.set((Math.random()-0.5)*4, PIT.waterY+0.5, (Math.random()-0.5)*3.5);
-  sp.scale.set(1.6,1.6,1);
-  sp.userData = { t: Math.random() };
-  scene.add(sp);
-  steamSprites.push(sp);
-}
-
-/* =====================================================================
- * 設備名ラベル
- * =================================================================== */
-const labels = [];
-function makeLabel(text, x, y, z){
-  const c = document.createElement('canvas');
-  c.width = 512; c.height = 112;
-  const g = c.getContext('2d');
-  const rr = (x,y,w,h,r)=>{
-    g.beginPath();
-    if(g.roundRect){ g.roundRect(x,y,w,h,r); }
-    else{
-      g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r);
-      g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath();
+    // 屋根トラス
+    addBox(g, 0.22, 0.22, 32.4, M.frame, x, H, 0);
+    strut(g, V3(x, H, -16.2), V3(x, roofY(0), 0), 0.24, M.frame);
+    strut(g, V3(x, roofY(0), 0), V3(x, H, 16.2), 0.24, M.frame);
+    for(let z=-14; z<=14; z+=2){
+      strut(g, V3(x, H, z), V3(x, roofY(z), z), 0.1, M.frame);
+      const zn = z < 0 ? z+2 : z-2;
+      if(z !== 0) strut(g, V3(x, H, z), V3(x, roofY(zn), zn), 0.08, M.frame);
     }
+    // 照明（高天井灯）
+    if(x > BLD.x1+2 && x < BLD.x2-2){
+      [-7, 7].forEach(z=>{
+        add(g, new THREE.CylinderGeometry(0.28, 0.5, 0.45, 16), M.steelDark, x, H - 0.3, z);
+        add(g, new THREE.CylinderGeometry(0.44, 0.44, 0.04, 16), M.lamp, x, H - 0.54, z).castShadow = false;
+      });
+    }
+  });
+  // 母屋
+  for(let z=-14; z<=14; z+=4) addBox(g, L, 0.18, 0.12, M.frame, cx, roofY(z)+0.18, z);
+  // クレーンランウェイ
+  [-15.0, 15.0].forEach(z=>{
+    addBox(g, L-1, 1.0, 0.5, M.frame, cx, BLD.runY, z);
+    addBox(g, L-1, 0.12, 0.14, M.steelDark, cx, CR.railY - 0.06, z);
+  });
+  // 奥壁（折板）・腰壁・明かり取り窓
+  addBox(g, L+0.4, H, 0.12, M.wall, cx, H/2, BLD.z1 - 0.25);
+  addBox(g, L+0.4, 1.2, 0.3, M.concreteW, cx, 0.6, BLD.z1 - 0.1);
+  add(g, new THREE.BoxGeometry(L-2, 1.6, 0.05), M.window, cx, 13.4, BLD.z1 - 0.17).castShadow = false;
+  // 妻壁
+  addBox(g, 0.12, H, 32.4, M.wall, BLD.x1 - 0.25, H/2, 0);
+  addBox(g, 0.12, H, 20.3, M.wall, BLD.x2 + 0.25, H/2, -5.85);
+  addBox(g, 0.12, H, 2.3, M.wall, BLD.x2 + 0.25, H/2, 15.05);
+  addBox(g, 0.12, H-7.5, 9.8, M.wall, BLD.x2 + 0.25, 7.5 + (H-7.5)/2, 9.0);
+  addBox(g, 0.4, 1.4, 9.8, M.steelDark, BLD.x2 + 0.25, 7.0, 9.0);         // シャッターBOX
+  // 手前の腰壁（カットアウェイ表示のため低く）
+  addBox(g, L+0.4, 0.6, 0.3, M.concreteW, cx, 0.3, BLD.z2 + 0.1);
+  // 奥壁沿いの電気盤列
+  for(let x=-40; x<=-24; x+=1.0){
+    addBox(g, 0.95, 2.1, 0.6, M.panel, x, 1.05, -15.5);
+    add(g, new THREE.BoxGeometry(0.06, 0.06, 0.02), (x|0)%3 ? M.ledGreen : M.ledRed, x+0.3, 1.8, -15.19).castShadow = false;
+  }
+  // 冷却水本管
+  pipe(g, [V3(-10, 1.0, -15.1), V3(20, 1.0, -15.1)], 0.3, M.pipeBlue);
+  pipe(g, [V3(-4.6, 1.0, -15.1), V3(-4.6, 0.35, -13), V3(-4.6, 0.35, -4.6), V3(-3.8, 0.35, -3.9)], 0.18, M.pipeBlue);
+  for(let x=-8; x<=18; x+=6) addBox(g, 0.7, 0.9, 0.7, M.pipeBlue, x, 0.45, -14.3);
+  bakeStatic(g);
+})();
+
+/* =====================================================================
+ * 7. 鋳造ピット
+ * =================================================================== */
+(function buildPit(){
+  const g = new THREE.Group(); scene.add(g);
+  const D = PIT.depth, t = 0.45, w = PIT.x2-PIT.x1, d = PIT.z2-PIT.z1;
+  addBox(g, w+2*t, D, t, M.pitWall, 0, -D/2, PIT.z1 - t/2);
+  addBox(g, w+2*t, D, t, M.pitWall, 0, -D/2, PIT.z2 + t/2);
+  addBox(g, t, D, d, M.pitWall, PIT.x1 - t/2, -D/2, 0);
+  addBox(g, t, D, d, M.pitWall, PIT.x2 + t/2, -D/2, 0);
+  addBox(g, w+2*t, 0.5, d+2*t, M.pitWall, 0, -D-0.25, 0);
+  // 開口縁金物
+  addBox(g, w+0.3, 0.06, 0.15, M.steelDark, 0, 0.03, PIT.z1-0.075);
+  addBox(g, w+0.3, 0.06, 0.15, M.steelDark, 0, 0.03, PIT.z2+0.075);
+  addBox(g, 0.15, 0.06, d, M.steelDark, PIT.x1-0.075, 0.03, 0);
+  addBox(g, 0.15, 0.06, d, M.steelDark, PIT.x2+0.075, 0.03, 0);
+  // プラテンガイド柱
+  [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([sx,sz])=> addBox(g, 0.3, D, 0.3, M.steel, sx*3.15, -D/2, sz*2.95));
+  // ラム外筒カラー
+  add(g, new THREE.CylinderGeometry(0.62, 0.75, 0.7, 24), M.steelDark, 0, -D+0.35, 0);
+  // ピット内はしご
+  for(let y=-D+0.3; y<-0.2; y+=0.35) addBox(g, 0.5, 0.04, 0.04, M.yellow, -2.2, y, PIT.z1+0.2);
+  addBox(g, 0.05, D, 0.05, M.yellow, -2.45, -D/2, PIT.z1+0.2);
+  addBox(g, 0.05, D, 0.05, M.yellow, -1.95, -D/2, PIT.z1+0.2);
+  // 手すり（z 両側・-x 側は樋の通り道を空ける）
+  const rail = (x1,z1,x2,z2)=>{
+    const len = Math.hypot(x2-x1, z2-z1), n = Math.max(2, Math.round(len/1.2)+1);
+    for(let i=0;i<n;i++){ const k = i/(n-1); addCyl(g, 0.03, 1.1, M.yellow, lerp(x1,x2,k), 0.55, lerp(z1,z2,k), 0,0,0, 8); }
+    const along = x1 === x2;
+    [1.1, 0.58].forEach(y=> addBox(g, along?0.05:len, 0.05, along?len:0.05, M.yellow, (x1+x2)/2, y, (z1+z2)/2));
+    addBox(g, along?0.02:len, 0.12, along?len:0.02, M.stripe, (x1+x2)/2, 0.06, (z1+z2)/2);
   };
-  g.fillStyle = 'rgba(16,22,31,0.78)';
-  rr(60, 10, 392, 70, 12); g.fill();
-  g.strokeStyle = 'rgba(255,154,60,0.7)'; g.lineWidth = 2;
-  rr(60, 10, 392, 70, 12); g.stroke();
-  g.fillStyle = '#e8eef4';
-  g.font = '600 40px "Segoe UI","Yu Gothic UI",sans-serif';
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(text, 256, 47);
-  const tex = new THREE.CanvasTexture(c);
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, transparent:true, depthTest:false }));
-  sp.position.set(x, y, z);
-  sp.scale.set(4.4, 0.96, 1);
-  sp.renderOrder = 5;
-  scene.add(sp);
-  labels.push(sp);
-}
-makeLabel('保持炉',           -28,   5.0,  0);
-makeLabel('インライン脱ガス装置', -16,  4.3,  0);
-makeLabel('CFFフィルター',     -10.2, 3.0,  0);
-makeLabel('鋳造テーブル',        0,   3.0,  0);
-makeLabel('鋳造ピット',          0,   0.9,  3.6);
+  rail(-3.9, -4.25, 3.6, -4.25); rail(-3.9, 4.25, 3.6, 4.25);
+  rail(-3.9, -4.25, -3.9, -0.7); rail(-3.9, 0.7, -3.9, 4.25);
+  // 傾動ヒンジ受け・傾動シリンダー基礎
+  [-3.0, 3.0].forEach(z=>{
+    addBox(g, 0.5, 0.45, 0.5, M.steelDark, TABLE.hx + 0.12, 0.22, z);
+    addCyl(g, 0.12, 0.62, M.steelLight, TABLE.hx, TABLE.hy, z, Math.PI/2, 0, 0);
+  });
+  [-3.72, 3.72].forEach(z=>{
+    addBox(g, 0.7, 0.3, 0.6, M.steelDark, 6.35, 0.15, z);
+    addBox(g, 0.12, 0.5, 0.4, M.steelDark, 6.3, 0.4, z);
+  });
+  // 油圧ユニット
+  addBox(g, 2.6, 1.6, 1.5, M.cabinet, 8.2, 0.8, -5.8);
+  addCyl(g, 0.5, 1.5, M.steel, 9.8, 0.75, -5.8);
+  pipe(g, [V3(7.0, 0.3, -5.2), V3(6.3, 0.3, -4.2), V3(6.3, 0.3, -3.9)], 0.06, M.steelDark);
+  bakeStatic(g);
+
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(w-0.05, d-0.05), M.water);
+  water.rotation.x = -Math.PI/2; water.position.y = PIT.waterY; water.receiveShadow = true;
+  scene.add(water);
+})();
 
 /* =====================================================================
- * 運転状態・シミュレーション
+ * 8. スクラップ（インスタンス描画）
  * =================================================================== */
-const PHASES = {
-  PREP:    { id:0, label:'鋳造準備',     color:'#e8c25f' },
-  CASTING: { id:1, label:'定常鋳造中',   color:'#5fd08a' },
-  DONE:    { id:2, label:'鋳造完了',     color:'#5fc6e8' },
-  RETRACT: { id:3, label:'テーブル退避', color:'#e8c25f' },
-  LIFT:    { id:4, label:'スラブ引上げ', color:'#e8c25f' },
-  UNLOAD:  { id:5, label:'スラブ搬出',   color:'#e8c25f' },
-  RETURN:  { id:6, label:'復帰動作',     color:'#e8c25f' },
-};
-
-const state = {
-  phase: PHASES.PREP,
-  phaseT: 0,            // フェーズ経過（実秒）
-  castLen: 0.9,         // 鋳造長 [m]（初期：ボトムブロック嵌合位置）
-  castLen0: 0.9,
-  target: 6.0,          // 目標鋳造長 [m]
-  raise: 0,             // 引上げ量 [m]
-  flow: 0,              // 溶湯フロー 0..1
-  tableShift: 0,        // テーブル退避量 [m]
-  slabFade: 1,          // スラブ不透明度（搬出演出）
-  paused: false,
-  simT: 0,              // シミュレーション内経過秒
-  speed: 60,            // mm/min
-  water: 100,           // m³/h
-  simScale: 60,
-};
-
-function setPhase(p){
-  state.phase = p;
-  state.phaseT = 0;
+const scrapGeos = (function(){
+  const plate = new THREE.BoxGeometry(1, 0.07, 0.6, 4, 1, 3);
+  const p = plate.attributes.position;
+  for(let i=0;i<p.count;i++){
+    const x = p.getX(i), z = p.getZ(i);
+    p.setY(i, p.getY(i) + Math.sin(x*5.3 + z*3.1)*0.07 + Math.cos(z*7.0)*0.03);
+  }
+  plate.computeVertexNormals();
+  const bar = new THREE.CylinderGeometry(0.055, 0.055, 1.1, 7);
+  bar.rotateZ(Math.PI/2);
+  const chunk = new THREE.BoxGeometry(0.55, 0.26, 0.34);
+  return [plate, bar, chunk];
+})();
+class ScrapSet{
+  constructor(n, parent){
+    this.n = n;
+    this.meshes = scrapGeos.map(geo=>{
+      const im = new THREE.InstancedMesh(geo, M.scrap, Math.ceil(n/3));
+      im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false;
+      dyn(im); parent.add(im);
+      return im;
+    });
+    for(let i=0;i<n;i++) this.hide(i);
+    this.commit();
+  }
+  set(i, pos, quat, scl, heat, tone){
+    const im = this.meshes[i%3], j = (i/3)|0;
+    _m4.compose(pos, quat, scl); im.setMatrixAt(j, _m4);
+    _c.setRGB(heat, tone, 0); im.setColorAt(j, _c);
+  }
+  hide(i){
+    const im = this.meshes[i%3], j = (i/3)|0;
+    _m4.makeScale(0,0,0); im.setMatrixAt(j, _m4);
+    _c.setRGB(0,1,0); im.setColorAt(j, _c);
+  }
+  commit(){ this.meshes.forEach(m=>{ m.instanceMatrix.needsUpdate = true; if(m.instanceColor) m.instanceColor.needsUpdate = true; }); }
 }
-
-function resetCast(){
-  state.castLen = state.castLen0;
-  state.raise = 0;
-  state.tableShift = 0;
-  state.slabFade = 1;
-  state.flow = 0;
-  state.simT = 0;
-  setPhase(PHASES.PREP);
+function randQuat(q, flat){
+  return q.setFromEuler(new THREE.Euler(rr(-0.5,0.5)*(flat?0.6:2), rr(0,6.28), rr(-0.5,0.5)*(flat?0.6:2)));
 }
 
 /* =====================================================================
- * UI バインド
+ * 9. 鋳造炉（スクラップ溶解・固定式反射炉）
  * =================================================================== */
-const $ = id => document.getElementById(id);
-$('in-speed').addEventListener('input', e=>{
-  state.speed = +e.target.value;
-  $('v-speed').textContent = state.speed + ' mm/min';
-});
-$('in-water').addEventListener('input', e=>{
-  state.water = +e.target.value;
-  $('v-water').textContent = state.water + ' m³/h';
-});
-$('in-sim').addEventListener('change', e=>{ state.simScale = +e.target.value; });
+const mf = { roof:new THREE.Group(), door:new THREE.Group(), cw:[], chains:[], plug:new THREE.Group(), flames:[], bath:null, stream:null };
+(function buildMeltingFurnace(){
+  const c = MF, g = new THREE.Group(); scene.add(g);
+  const X1 = c.x - c.hx, X2 = c.x + c.hx, Z1 = c.z - c.hz, Z2 = c.z + c.hz, wt = c.wt;
+  const H = c.y1 - c.y0, yc = (c.y0 + c.y1)/2;
+  const dx1 = c.x - c.doorW/2, dx2 = c.x + c.doorW/2;
+  // 基礎
+  addBox(g, 2*c.hx + 0.4, c.y0, 2*c.hz + 0.4, M.concreteW, c.x, c.y0/2, c.z);
+  // 炉壁（耐火物）＋ 外殻鋼板
+  addBox(g, 2*c.hx, H, wt, M.mfRefr, c.x, yc, Z1 + wt/2);
+  addBox(g, wt, H, 2*c.hz - 2*wt, M.mfRefr, X1 + wt/2, yc, c.z);
+  addBox(g, wt, H, 2*c.hz - 2*wt, M.mfRefr, X2 - wt/2, yc, c.z);
+  addBox(g, dx1 - X1, H, wt, M.mfRefr, (X1+dx1)/2, yc, Z2 - wt/2);
+  addBox(g, X2 - dx2, H, wt, M.mfRefr, (X2+dx2)/2, yc, Z2 - wt/2);
+  addBox(g, c.doorW, c.sill - c.y0, wt, M.mfRefr, c.x, (c.y0 + c.sill)/2, Z2 - wt/2);
+  addBox(g, c.doorW, c.y1 - c.doorTop, wt, M.mfRefr, c.x, (c.doorTop + c.y1)/2, Z2 - wt/2);
+  addBox(g, 2*c.hx - 2*wt, c.hearth - c.y0, 2*c.hz - 2*wt, M.mfRefr, c.x, (c.y0 + c.hearth)/2, c.z);
+  const sk = 0.06;
+  addBox(g, 2*c.hx + 2*sk, H, sk, M.furnace, c.x, yc, Z1 - sk/2);
+  addBox(g, sk, H, 2*c.hz, M.furnace, X1 - sk/2, yc, c.z);
+  addBox(g, sk, H, 2*c.hz, M.furnace, X2 + sk/2, yc, c.z);
+  addBox(g, dx1 - X1 + sk, H, sk, M.furnace, (X1 - sk + dx1)/2, yc, Z2 + sk/2);
+  addBox(g, X2 + sk - dx2, H, sk, M.furnace, (X2 + sk + dx2)/2, yc, Z2 + sk/2);
+  addBox(g, c.doorW, c.sill - c.y0, sk, M.furnace, c.x, (c.y0 + c.sill)/2, Z2 + sk/2);
+  addBox(g, c.doorW, c.y1 - c.doorTop, sk, M.furnace, c.x, (c.doorTop + c.y1)/2, Z2 + sk/2);
+  // バックステー（H形鋼）とタイビーム
+  for(let x = X1 + 0.6; x <= X2 - 0.5; x += 1.4){
+    addBox(g, 0.24, H + 0.35, 0.22, M.trim, x, c.y0 + (H+0.35)/2, Z1 - 0.17);
+    if(x < dx1 - 0.2 || x > dx2 + 0.2) addBox(g, 0.24, H + 0.35, 0.22, M.trim, x, c.y0 + (H+0.35)/2, Z2 + 0.17);
+  }
+  for(let z = Z1 + 0.6; z <= Z2 - 0.5; z += 1.3){
+    addBox(g, 0.22, H + 0.35, 0.24, M.trim, X1 - 0.17, c.y0 + (H+0.35)/2, z);
+    addBox(g, 0.22, H + 0.35, 0.24, M.trim, X2 + 0.17, c.y0 + (H+0.35)/2, z);
+  }
+  addBox(g, 2*c.hx + 0.6, 0.25, 0.3, M.trim, c.x, c.y1 + 0.05, Z1 - 0.2);
+  addBox(g, 0.3, 0.25, 2*c.hz + 0.6, M.trim, X1 - 0.2, c.y1 + 0.05, c.z);
+  addBox(g, 0.3, 0.25, 2*c.hz + 0.6, M.trim, X2 + 0.2, c.y1 + 0.05, c.z);
+  // のぞき窓
+  const peep = (x,y,z,ry)=>{ const m = add(g, new THREE.BoxGeometry(0.22, 0.16, 0.03), M.peepMF, x,y,z, 0,ry,0); m.castShadow = false; };
+  peep(X1 - 0.08, 3.4, -1.3, Math.PI/2); peep(X1 - 0.08, 3.4, 1.3, Math.PI/2);
+  peep(c.x - 3.2, 4.0, Z1 - 0.08, 0); peep(c.x + 3.2, 4.0, Z1 - 0.08, 0);
+  // リジェネバーナー（奥壁）と燃焼配管
+  [-2.1, 2.1].forEach(dx=>{
+    addCyl(g, 0.36, 1.3, M.steelLight, c.x + dx, 4.3, Z1 - 0.75, Math.PI/2, 0, 0);
+    addBox(g, 0.9, 0.9, 0.9, M.cabinet, c.x + dx, 4.3, Z1 - 1.8);
+    pipe(g, [V3(c.x+dx, 4.3, Z1-2.25), V3(c.x+dx, 4.3, Z1-2.9), V3(c.x+dx, 6.2, Z1-2.9)], 0.22, M.steel);
+    pipe(g, [V3(c.x+dx+0.35, 4.75, Z1-1.2), V3(c.x+dx+0.35, 5.6, Z1-1.2), V3(c.x+dx+0.35, 5.6, Z1-3.6)], 0.06, M.pipeRed);
+  });
+  pipe(g, [V3(c.x - 2.1, 6.2, Z1-2.9), V3(c.x + 2.1, 6.2, Z1-2.9)], 0.3, M.steel);
+  addBox(g, 2.2, 1.8, 1.6, M.cabinet, c.x - 5.6, 0.9, Z1 - 3.2);                 // 燃焼空気ブロワー
+  pipe(g, [V3(c.x - 5.6, 1.8, Z1-3.2), V3(c.x-5.6, 6.2, Z1-3.2), V3(c.x - 2.1, 6.2, Z1-2.9)], 0.28, M.steel);
+  // 排ガスダクト・煙突
+  addBox(g, 1.4, 1.2, 1.4, M.steel, c.x, c.y1 - 0.4, Z1 - 0.95);
+  addBox(g, 1.2, 1.1, 3.4, M.steel, c.x, c.y1 - 0.4, Z1 - 3.3);
+  addCyl(g, 0.95, 24, M.steelDark, c.x, 12, Z1 - 5.4, 0,0,0, 24);
+  [6, 12, 18, 23.6].forEach(y=> addCyl(g, 1.05, 0.2, M.steel, c.x, y, Z1 - 5.4, 0,0,0, 24));
+  // 電磁攪拌装置（-x 側壁）
+  addBox(g, 0.9, 2.4, 4.0, M.cabinet, X1 - 0.7, c.y0 + 1.35, c.z);
+  addBox(g, 0.95, 0.3, 4.1, M.trim, X1 - 0.7, c.y0 + 2.65, c.z);
+  pipe(g, [V3(X1-0.7, c.y0+0.2, -2.1), V3(X1-0.7, 0.3, -3.2), V3(X1-2.4, 0.3, -5.0)], 0.12, M.steelDark);
+  addBox(g, 1.4, 2.0, 0.8, M.panel, X1 - 2.6, 1.0, -5.4);
+  // 炉扉ガイド・上部梁
+  const pz = Z2 + 0.32;
+  [dx1 - 0.45, dx2 + 0.45].forEach(x=> addBox(g, 0.3, 8.2 - c.y0, 0.3, M.trim, x, (c.y0 + 8.2)/2, pz));
+  addBox(g, c.doorW + 1.5, 0.45, 0.5, M.trim, c.x, 8.35, pz);
+  [dx1 + 0.8, dx2 - 0.8].forEach(x=> addCyl(g, 0.22, 0.3, M.steelLight, x, 8.65, pz, Math.PI/2, 0, 0));
+  // 出湯口（+x 壁）
+  addBox(g, 0.8, 0.9, 1.1, M.castable, X2 + 0.4, 2.45, c.z);
+  addBox(g, 0.55, 0.16, 0.5, M.castable, X2 + 0.95, 2.36, c.z);
+  addBox(g, 0.12, 1.4, 0.2, M.trim, X2 + 0.2, 3.3, c.z + 0.5);
+  addBox(g, 0.8, 0.12, 0.2, M.trim, X2 + 0.55, 3.95, c.z + 0.5);
+  // 炉壁天端（天井カット時の断面）
+  bakeStatic(g);
 
-$('btn-pause').addEventListener('click', ()=>{
-  state.paused = !state.paused;
-  $('btn-pause').innerHTML = state.paused
-    ? '<i class="fa-solid fa-play"></i>再開'
-    : '<i class="fa-solid fa-pause"></i>一時停止';
-});
-$('btn-reset').addEventListener('click', resetCast);
+  // 炉天井（表示切替のため個別グループ）
+  const r = new THREE.Group();
+  addBox(r, 2*c.hx + 0.12, 0.45, 2*c.hz + 0.12, M.furnace, c.x, c.y1 + 0.225, c.z);
+  addBox(r, 2*c.hx - 2*wt, 0.05, 2*c.hz - 2*wt, M.mfRefr, c.x, c.y1 - 0.02, c.z);
+  for(let x = X1 + 0.5; x <= X2 - 0.4; x += 1.2) addBox(r, 0.22, 0.38, 2*c.hz + 0.4, M.trim, x, c.y1 + 0.64, c.z);
+  addBox(r, 0.8, 0.5, 0.8, M.steel, c.x - 2.8, c.y1 + 0.7, c.z + 1.2);
+  addCyl(r, 0.2, 1.4, M.steelLight, c.x + 2.6, c.y1 + 1.1, c.z + 0.8);
+  bakeLocal(r, mf.roof); scene.add(mf.roof);
 
-$('tg-pit').addEventListener('change', e=>{
-  M.pitWall.opacity = e.target.checked ? 0.28 : 1.0;
-  M.pitWall.needsUpdate = true;
-});
-$('tg-label').addEventListener('change', e=>{
-  labels.forEach(l=> l.visible = e.target.checked);
-});
+  // 炉扉（昇降）
+  const d = new THREE.Group(), dh = c.doorTop - c.sill + 0.5;
+  addBox(d, c.doorW + 0.6, dh, 0.22, M.mfRefr, 0, 0, -0.08);
+  addBox(d, c.doorW + 0.7, dh + 0.1, 0.14, M.furnace, 0, 0, 0.1);
+  for(let x = -1.8; x <= 1.81; x += 0.9) addBox(d, 0.14, dh + 0.1, 0.14, M.trim, x, 0, 0.22);
+  addBox(d, c.doorW + 0.8, 0.18, 0.2, M.trim, 0, dh/2 + 0.1, 0.16);
+  mf.doorH = dh;
+  bakeLocal(d, mf.door);
+  mf.door.position.set(c.x, (c.sill + c.doorTop)/2, Z2 + 0.16);
+  scene.add(mf.door);
+  [dx1 - 0.85, dx2 + 0.85].forEach(x=>{
+    const cw = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.3, 0.4), M.steelDark);
+    cw.castShadow = true; cw.position.set(x, 7.2, pz); scene.add(cw); mf.cw.push(cw);
+  });
+  [dx1 + 0.8, dx2 - 0.8].forEach(x=>{
+    const ch = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1, 0.05), M.steelDark);
+    ch.position.set(x, 7, Z2 + 0.2); scene.add(ch); mf.chains.push(ch);
+  });
+
+  // 出湯栓（レバー式プラグ）
+  const pl = new THREE.Group();
+  addBox(pl, 0.12, 1.2, 0.12, M.steelLight, 0, -0.6, 0);
+  add(pl, new THREE.ConeGeometry(0.14, 0.3, 12), M.castable, -0.1, -1.2, 0, 0, 0, Math.PI/2);
+  mf.plug = pl; pl.position.set(X2 + 0.7, 3.95, c.z); scene.add(pl);
+
+  // 溶湯面・火炎・溶湯流
+  const bm = makeMelt({ skin:0.35, scale:1.1, cx:c.x, cz:c.z, glow:1.0 });
+  const bath = new THREE.Mesh(new THREE.PlaneGeometry(2*c.hx - 2*wt, 2*c.hz - 2*wt).rotateX(-Math.PI/2), bm.mat);
+  bath.position.set(c.x, c.lvl0, c.z); scene.add(bath);
+  mf.bath = bath; mf.bathU = bm.u;
+  const fgeo = new THREE.CylinderGeometry(0.06, 0.55, 3.4, 20, 6, true).translate(0, 1.7, 0);
+  [-2.1, 2.1].forEach(dx=>{
+    const f = new THREE.Mesh(fgeo, makeFlameMat());
+    f.position.set(c.x + dx, 4.3, Z1 + wt);
+    f.quaternion.setFromUnitVectors(UP, V3(0, -0.38, 1).normalize());
+    f.renderOrder = 3; scene.add(f); mf.flames.push(f);
+  });
+  mf.stream = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 1, 10), M.stream);
+  scene.add(mf.stream);
+})();
 
 /* =====================================================================
- * カメラ制御（独自オービット + プリセット遷移）
+ * 10. 保持炉（固定式）
  * =================================================================== */
-const cam = {
-  target: new THREE.Vector3(-8, 1, 0),
-  theta: 0.9, phi: 1.12, dist: 36,
-  anim: null,
+const hf = { roof:new THREE.Group(), door:new THREE.Group(), stopper:new THREE.Group(), flames:[], bath:null };
+(function buildHoldingFurnace(){
+  const c = HF, g = new THREE.Group(); scene.add(g);
+  const X1 = c.x - c.hx, X2 = c.x + c.hx, Z1 = c.z - c.hz, Z2 = c.z + c.hz, wt = c.wt;
+  const H = c.y1 - c.y0, yc = (c.y0 + c.y1)/2;
+  const dx1 = c.x - c.doorW/2, dx2 = c.x + c.doorW/2, sk = 0.06;
+  addBox(g, 2*c.hx + 0.4, c.y0, 2*c.hz + 0.4, M.concreteW, c.x, c.y0/2, c.z);
+  addBox(g, 2*c.hx, H, wt, M.hfRefr, c.x, yc, Z1 + wt/2);
+  // -x 壁（受湯口の開口つき）
+  const iy1 = 2.05, iy2 = 2.6, iz = 0.32;
+  addBox(g, wt, H, c.hz - wt - iz, M.hfRefr, X1 + wt/2, yc, (Z1 + wt - iz)/2);
+  addBox(g, wt, H, c.hz - wt - iz, M.hfRefr, X1 + wt/2, yc, (Z2 - wt + iz)/2);
+  addBox(g, wt, iy1 - c.y0, 2*iz, M.hfRefr, X1 + wt/2, (c.y0 + iy1)/2, c.z);
+  addBox(g, wt, c.y1 - iy2, 2*iz, M.hfRefr, X1 + wt/2, (iy2 + c.y1)/2, c.z);
+  addBox(g, wt, H, 2*c.hz - 2*wt, M.hfRefr, X2 - wt/2, yc, c.z);
+  addBox(g, dx1 - X1, H, wt, M.hfRefr, (X1+dx1)/2, yc, Z2 - wt/2);
+  addBox(g, X2 - dx2, H, wt, M.hfRefr, (X2+dx2)/2, yc, Z2 - wt/2);
+  addBox(g, c.doorW, c.sill - c.y0, wt, M.hfRefr, c.x, (c.y0 + c.sill)/2, Z2 - wt/2);
+  addBox(g, c.doorW, c.y1 - c.doorTop, wt, M.hfRefr, c.x, (c.doorTop + c.y1)/2, Z2 - wt/2);
+  addBox(g, 2*c.hx - 2*wt, c.hearth - c.y0, 2*c.hz - 2*wt, M.hfRefr, c.x, (c.y0 + c.hearth)/2, c.z);
+  addBox(g, 2*c.hx + 2*sk, H, sk, M.furnace, c.x, yc, Z1 - sk/2);
+  addBox(g, sk, H, c.hz - iz, M.furnace, X1 - sk/2, yc, (Z1 - iz)/2);
+  addBox(g, sk, H, c.hz - iz, M.furnace, X1 - sk/2, yc, (Z2 + iz)/2);
+  addBox(g, sk, iy1 - c.y0, 2*iz, M.furnace, X1 - sk/2, (c.y0 + iy1)/2, c.z);
+  addBox(g, sk, c.y1 - iy2, 2*iz, M.furnace, X1 - sk/2, (iy2 + c.y1)/2, c.z);
+  addBox(g, sk, H, 2*c.hz, M.furnace, X2 + sk/2, yc, c.z);
+  addBox(g, dx1 - X1 + sk, H, sk, M.furnace, (X1 - sk + dx1)/2, yc, Z2 + sk/2);
+  addBox(g, X2 + sk - dx2, H, sk, M.furnace, (X2 + sk + dx2)/2, yc, Z2 + sk/2);
+  addBox(g, c.doorW, c.sill - c.y0, sk, M.furnace, c.x, (c.y0 + c.sill)/2, Z2 + sk/2);
+  addBox(g, c.doorW, c.y1 - c.doorTop, sk, M.furnace, c.x, (c.doorTop + c.y1)/2, Z2 + sk/2);
+  // 受湯シュート
+  addBox(g, 1.0, 0.12, 0.62, M.castable, X1 + 0.45, 2.1, c.z);
+  for(let x = X1 + 0.5; x <= X2 - 0.4; x += 1.25){
+    addBox(g, 0.22, H + 0.3, 0.2, M.trim, x, c.y0 + (H+0.3)/2, Z1 - 0.16);
+    if(x < dx1 - 0.2 || x > dx2 + 0.2) addBox(g, 0.22, H + 0.3, 0.2, M.trim, x, c.y0 + (H+0.3)/2, Z2 + 0.16);
+  }
+  [Z1 + 0.5, Z2 - 0.5].forEach(z=>{
+    addBox(g, 0.2, H + 0.3, 0.22, M.trim, X1 - 0.16, c.y0 + (H+0.3)/2, z);
+    addBox(g, 0.2, H + 0.3, 0.22, M.trim, X2 + 0.16, c.y0 + (H+0.3)/2, z);
+  });
+  const peep = (x,y,z,ry)=>{ const m = add(g, new THREE.BoxGeometry(0.2, 0.14, 0.03), M.peepHF, x,y,z, 0,ry,0); m.castShadow = false; };
+  peep(c.x - 2.2, 3.2, Z1 - 0.08, 0); peep(c.x + 2.2, 3.2, Z1 - 0.08, 0);
+  // バーナー・煙突
+  addCyl(g, 0.3, 1.1, M.steelLight, c.x, 3.4, Z1 - 0.65, Math.PI/2, 0, 0);
+  pipe(g, [V3(c.x, 3.4, Z1-1.2), V3(c.x, 3.4, Z1-1.9), V3(c.x, 5.4, Z1-1.9)], 0.18, M.steel);
+  pipe(g, [V3(c.x+0.3, 3.8, Z1-1.0), V3(c.x+0.3, 4.6, Z1-1.0), V3(c.x+0.3, 4.6, Z1-3.2)], 0.05, M.pipeRed);
+  addBox(g, 1.0, 0.9, 1.0, M.steel, c.x + 1.8, c.y1 - 0.3, Z1 - 0.7);
+  addBox(g, 0.9, 0.8, 2.6, M.steel, c.x + 1.8, c.y1 - 0.3, Z1 - 2.4);
+  addCyl(g, 0.62, 19, M.steelDark, c.x + 1.8, 9.5, Z1 - 3.9, 0,0,0, 20);
+  [6, 12, 18.6].forEach(y=> addCyl(g, 0.7, 0.18, M.steel, c.x + 1.8, y, Z1 - 3.9, 0,0,0, 20));
+  // 扉ガイド
+  const pz = Z2 + 0.28;
+  [dx1 - 0.35, dx2 + 0.35].forEach(x=> addBox(g, 0.24, 6.2 - c.y0, 0.24, M.trim, x, (c.y0 + 6.2)/2, pz));
+  addBox(g, c.doorW + 1.1, 0.35, 0.4, M.trim, c.x, 6.3, pz);
+  // 出湯口（+x）とストッパー架台
+  addBox(g, 0.7, 0.8, 1.0, M.castable, X2 + 0.35, 1.55, c.z);
+  addBox(g, 0.5, 0.14, 0.46, M.castable, X2 + 0.85, 1.52, c.z);
+  addBox(g, 0.14, 2.2, 0.14, M.trim, X2 + 0.25, 2.8, c.z - 0.55);
+  addBox(g, 1.1, 0.14, 0.14, M.trim, X2 + 0.75, 3.85, c.z - 0.55);
+  addCyl(g, 0.1, 0.7, M.steelLight, X2 + 1.2, 3.55, c.z - 0.55);
+  bakeStatic(g);
+
+  const r = new THREE.Group();
+  addBox(r, 2*c.hx + 0.12, 0.4, 2*c.hz + 0.12, M.furnace, c.x, c.y1 + 0.2, c.z);
+  for(let x = X1 + 0.5; x <= X2 - 0.4; x += 1.25) addBox(r, 0.2, 0.34, 2*c.hz + 0.3, M.trim, x, c.y1 + 0.57, c.z);
+  addCyl(r, 0.18, 1.1, M.steelLight, c.x - 1.6, c.y1 + 0.9, c.z + 0.6);
+  bakeLocal(r, hf.roof); scene.add(hf.roof);
+
+  const d = new THREE.Group(), dh = c.doorTop - c.sill + 0.45;
+  addBox(d, c.doorW + 0.5, dh, 0.2, M.hfRefr, 0, 0, -0.07);
+  addBox(d, c.doorW + 0.6, dh + 0.1, 0.12, M.furnace, 0, 0, 0.09);
+  for(let x = -1.2; x <= 1.21; x += 0.8) addBox(d, 0.12, dh + 0.1, 0.12, M.trim, x, 0, 0.19);
+  bakeLocal(d, hf.door);
+  hf.door.position.set(c.x, (c.sill + c.doorTop)/2, Z2 + 0.14);
+  scene.add(hf.door);
+
+  // 出湯ストッパー（上下動）
+  const st = new THREE.Group();
+  addBox(st, 0.1, 1.5, 0.1, M.steelLight, 0, 0.75, 0);
+  add(st, new THREE.ConeGeometry(0.12, 0.26, 12), M.castable, 0, -0.1, 0, Math.PI, 0, 0);
+  hf.stopper = st; st.position.set(X2 + 1.2, 1.75, c.z - 0.55 + 0.55); scene.add(st);
+
+  const bm = makeMelt({ skin:0.3, scale:1.2, cx:c.x, cz:c.z, glow:0.95 });
+  const bath = new THREE.Mesh(new THREE.PlaneGeometry(2*c.hx - 2*wt, 2*c.hz - 2*wt).rotateX(-Math.PI/2), bm.mat);
+  bath.position.set(c.x, c.lvl0, c.z); scene.add(bath);
+  hf.bath = bath; hf.bathU = bm.u;
+  const fgeo = new THREE.CylinderGeometry(0.05, 0.42, 2.6, 18, 5, true).translate(0, 1.3, 0);
+  const f = new THREE.Mesh(fgeo, makeFlameMat());
+  f.position.set(c.x, 3.4, Z1 + wt);
+  f.quaternion.setFromUnitVectors(UP, V3(0, -0.42, 1).normalize());
+  f.renderOrder = 3; scene.add(f); hf.flames.push(f);
+  hf.inStream = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.06, 1, 10), M.stream); scene.add(hf.inStream);
+  hf.tapStream = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 1, 10), M.stream); scene.add(hf.tapStream);
+})();
+
+/* =====================================================================
+ * 11. 樋（ランダー）・インライン脱ガス・CFF
+ * =================================================================== */
+function launder(g, axis, a1, a2, c, yMelt, opt){
+  opt = opt || {};
+  const len = a2 - a1, mid = (a1 + a2)/2, yf = yMelt - 0.2, yt = yMelt + 0.14;
+  const B = (across, h, y, off, mat)=> axis === 'x'
+    ? addBox(g, len, h, across, mat, mid, y, c + off)
+    : addBox(g, across, h, len, mat, c + off, y, mid);
+  B(0.74, 0.08, yf - 0.12, 0, M.steel);
+  B(0.62, 0.08, yf - 0.04, 0, M.castable);
+  [-1, 1].forEach(s=>{
+    if(opt.gap && s === opt.gap.side){
+      // 側壁の一部を開口（合流部）
+      const [g1, g2] = opt.gap.range;
+      const seg = (b1,b2)=>{ const l = b2-b1, m = (b1+b2)/2;
+        if(axis === 'x'){ addBox(g, l, yt-yf+0.16, 0.06, M.steel, m, (yt+yf-0.16)/2, c+s*0.34); addBox(g, l, yt-yf+0.08, 0.1, M.castable, m, (yt+yf-0.08)/2, c+s*0.26); }
+        else { addBox(g, 0.06, yt-yf+0.16, l, M.steel, c+s*0.34, (yt+yf-0.16)/2, m); addBox(g, 0.1, yt-yf+0.08, l, M.castable, c+s*0.26, (yt+yf-0.08)/2, m); } };
+      seg(a1, g1); seg(g2, a2);
+    }else{
+      B(0.06, yt - yf + 0.16, (yt + yf - 0.16)/2, s*0.34, M.steel);
+      B(0.10, yt - yf + 0.08, (yt + yf - 0.08)/2, s*0.26, M.castable);
+      B(0.18, 0.03, yt + 0.015, s*0.29, M.steelDark);
+    }
+  });
+  const cap = at=>{ if(axis === 'x') addBox(g, 0.12, yt - yf + 0.16, 0.74, M.steel, at, (yt+yf-0.16)/2, c);
+                    else addBox(g, 0.74, yt - yf + 0.16, 0.12, M.steel, c, (yt+yf-0.16)/2, at); };
+  if(opt.capA) cap(a1 + 0.06);
+  if(opt.capB) cap(a2 - 0.06);
+  if(opt.legs !== false){
+    const n = Math.max(2, Math.round(len/2.3) + 1), h = yf - 0.16;
+    for(let i=0;i<n;i++){
+      const t = a1 + 0.35 + (len - 0.7) * i/(n-1);
+      [-0.3, 0.3].forEach(o=>{
+        if(axis === 'x') addBox(g, 0.1, h, 0.1, M.steelDark, t, h/2, c + o);
+        else addBox(g, 0.1, h, 0.1, M.steelDark, c + o, h/2, t);
+      });
+      if(axis === 'x') addBox(g, 0.1, 0.1, 0.72, M.steelDark, t, h - 0.05, c); else addBox(g, 0.72, 0.1, 0.1, M.steelDark, c, h - 0.05, t);
+    }
+  }
+  if(opt.cover){
+    const [c1, c2] = opt.cover, cl = c2 - c1, cm = (c1 + c2)/2;
+    if(axis === 'x'){ addBox(g, cl, 0.05, 0.8, M.steel, cm, yt + 0.05, c); for(let x=c1+0.5; x<c2; x+=1.2) addBox(g, 0.3, 0.12, 0.04, M.yellow, x, yt + 0.13, c); }
+  }
+}
+function meltStrip(parent, len, width, x, y, z, dir, o){
+  const geo = new THREE.PlaneGeometry(len, width).rotateX(-Math.PI/2);
+  if(dir === '-x') geo.rotateY(Math.PI);
+  else if(dir === '+z') geo.rotateY(-Math.PI/2);
+  else if(dir === '-z') geo.rotateY(Math.PI/2);
+  const f = 0.55, fl = { '+x':[f,0], '-x':[-f,0], '+z':[0,f], '-z':[0,-f] }[dir];
+  const mm = makeMelt(Object.assign({ fx:fl[0], fz:fl[1], skin:0.12, scale:2.0, glow:1.15 }, o || {}));
+  const m = dyn(new THREE.Mesh(geo, mm.mat));
+  m.position.set(x, y, z); m.renderOrder = 1; parent.add(m);
+  return { mesh:m, u:mm.u };
+}
+
+// 充填フロント管理（溶湯経路上の距離で可視範囲を制御）
+const PATH_TR = [];   // 移湯樋
+const PATH_MAIN = []; // 保持炉→鋳造機
+function pathSeg(list, strip, s0, len){ list.push({ strip, s0, len }); strip.mesh.visible = false; }
+
+const deg = { rotors:[] };
+(function buildLaunders(){
+  const g = new THREE.Group(); scene.add(g);
+  // 移湯樋（鋳造炉 → 保持炉）
+  launder(g, 'x', -40.75, -33.55, 0, 2.22, { capA:true });
+  pathSeg(PATH_TR, meltStrip(scene, 7.1, 0.42, (-40.7 - 33.6)/2, 2.22, 0, '+x'), 0, 7.1);
+  // 主樋 A: 保持炉 → 脱ガス
+  launder(g, 'x', -25.75, -21.3, 0, 1.45, { capA:true });
+  pathSeg(PATH_MAIN, meltStrip(scene, 4.4, 0.42, -23.5, 1.45, 0, '+x'), 0, 4.4);
+  // 主樋 B: 脱ガス → CFF
+  launder(g, 'x', -17.7, -14.6, 0, 1.41);
+  pathSeg(PATH_MAIN, meltStrip(scene, 3.05, 0.42, -16.15, 1.41, 0, '+x'), 8.0, 3.05);
+  // 主樋 C: CFF → 鋳造テーブル（中間はカバー付き）
+  launder(g, 'x', -12.2, -3.72, 0, 1.37, { cover:[-10.6, -7.0] });
+  pathSeg(PATH_MAIN, meltStrip(scene, 8.45, 0.42, -7.96, 1.37, 0, '+x'), 13.4, 8.45);
+
+  // インライン脱ガス装置（回転ローター式・2槽）
+  const dx = -19.5;
+  addBox(g, 3.6, 1.9, 2.4, M.cabinet, dx, 0.95, 0);
+  addBox(g, 3.8, 0.2, 2.6, M.steelDark, dx, 0.1, 0);
+  addBox(g, 3.72, 0.24, 2.52, M.steel, dx, 2.02, 0);
+  addBox(g, 3.4, 0.1, 0.12, M.yellow, dx, 1.3, 1.22);
+  [-0.9, 0.9].forEach(o=>{
+    addBox(g, 0.18, 1.1, 0.18, M.steelDark, dx + o, 2.7, -0.95);
+    addBox(g, 0.18, 0.18, 1.0, M.steelDark, dx + o, 3.2, -0.5);
+    addCyl(g, 0.26, 0.55, M.cabinet, dx + o, 3.0, 0, 0,0,0, 18);
+    pipe(g, [V3(dx+o+0.25, 2.95, -0.1), V3(dx+o+0.25, 3.35, -0.1), V3(dx+o+0.25, 3.35, -1.9), V3(dx+o+0.25, 1.9, -1.9)], 0.035, M.pipeRed);
+    const cp = new THREE.Group();
+    add(cp, new THREE.CylinderGeometry(0.17, 0.17, 0.12, 16), M.steelLight, 0, 0, 0);
+    addBox(cp, 0.36, 0.13, 0.06, M.trim, 0, 0, 0);
+    addCyl(cp, 0.06, 0.45, M.steelLight, 0, -0.25, 0);
+    cp.position.set(dx + o, 2.45, 0); scene.add(cp); deg.rotors.push(cp);
+  });
+  addCyl(g, 0.18, 1.2, M.steel, dx - 1.5, 2.7, 0.8);
+  addBox(g, 1.3, 1.9, 0.6, M.panel, dx, 0.95, -2.0);
+  add(g, new THREE.BoxGeometry(0.5, 0.3, 0.02), M.screen, dx - 0.2, 1.4, -1.69).castShadow = false;
+  [-0.35, 0, 0.35].forEach(o=> addCyl(g, 0.2, 1.5, M.pipeGreen, dx - 2.3 + o, 0.75, -1.9));
+  addBox(g, 1.2, 0.08, 0.5, M.steelDark, dx - 2.3, 1.2, -1.9);
+  deg.x = dx;
+  // CFF（セラミックフォームフィルター）ボックス
+  const fx = -13.4;
+  addBox(g, 2.4, 1.75, 2.0, M.cabinet, fx, 0.875, 0);
+  addBox(g, 2.5, 0.2, 2.1, M.steel, fx, 1.85, 0);
+  addBox(g, 2.6, 0.2, 2.2, M.steelDark, fx, 0.1, 0);
+  [-0.9, 0.9].forEach(o=> addBox(g, 0.14, 0.3, 0.44, M.yellow, fx + o, 2.1, 0));
+  addCyl(g, 0.16, 0.7, M.steelLight, fx + 0.4, 2.3, 0.55);
+  pipe(g, [V3(fx+0.4, 2.62, 0.55), V3(fx+0.4, 2.9, 0.55), V3(fx+0.4, 2.9, 1.3), V3(fx+0.4, 0.3, 1.3)], 0.04, M.pipeRed);
+  bakeStatic(g);
+})();
+
+/* =====================================================================
+ * 12. 鋳造テーブル（3ストランド・傾動式）
+ * =================================================================== */
+const table = { pivot:new THREE.Group(), body:new THREE.Group(), moldMelt:[], cyl:[] };
+(function buildTable(){
+  table.pivot.position.set(TABLE.hx, TABLE.hy, 0);
+  table.body.position.set(-TABLE.hx, -TABLE.hy, 0);
+  table.pivot.add(table.body); scene.add(table.pivot);
+  const b = new THREE.Group();
+  // フレーム
+  const fy = 0.28, fh = 0.36;
+  [-3.3, 3.3].forEach(z=> addBox(b, 7.15, fh, 0.3, M.steel, -0.02, fy, z));
+  addBox(b, 0.3, fh, 6.3, M.steel, -3.45, fy, 0);
+  addBox(b, 0.3, fh, 6.3, M.steel, 3.4, fy, 0);
+  [-2.25, -0.75, 0.75, 2.25].forEach(z=> addBox(b, 6.6, 0.3, 0.22, M.steelDark, 0, fy, z));
+  [-1.45, 1.45].forEach(x=> addBox(b, 0.22, 0.3, 6.3, M.steelDark, x, fy, 0));
+  [-2.9, 2.9].forEach(z=> addBox(b, 0.34, 0.3, 0.36, M.steelDark, TABLE.hx - 0.12, 0.3, z));
+  [-3.62, 3.62].forEach(z=> addBox(b, 0.34, 0.36, 0.38, M.steelDark, 1.8, 0.5, z));
+  // モールド（水冷鋳型）×3
+  MOLD_Z.forEach(z0=>{
+    const y = 0.71, h = 0.58;
+    [-1, 1].forEach(s=>{
+      addBox(b, 2.3, h, 0.2, M.steelLight, 0, y, z0 + s*0.375);
+      addBox(b, 0.35, h, 0.55, M.steelLight, s*0.975, y, z0);
+      addBox(b, 1.62, 0.3, 0.02, M.graphite, 0, 0.84, z0 + s*0.285);
+      addBox(b, 0.02, 0.3, 0.55, M.graphite, s*0.81, 0.84, z0);
+      addBox(b, 0.2, 0.3, 0.3, M.steelDark, s*1.25, 0.55, z0);
+      addCyl(b, 0.07, 1.15, M.pipeBlue, s*1.75, 0.62, z0, 0, 0, Math.PI/2);
+    });
+    // コンボバッグ・フロート・レベルセンサー
+    addBox(b, 0.5, 0.1, 0.24, M.fabric, 0, 0.94, z0);
+    addCyl(b, 0.03, 0.5, M.steelLight, 0.12, 1.55, z0);
+    addBox(b, 0.14, 0.14, 0.14, M.steelDark, 0.55, 1.62, z0);
+    addBox(b, 0.5, 0.05, 0.05, M.steelDark, 0.3, 1.62, z0);
+    add(b, new THREE.BoxGeometry(0.03, 0.03, 0.03), M.ledRed, 0.55, 1.55, z0).castShadow = false;
+    add(b, new THREE.CylinderGeometry(0.075, 0.055, 0.36, 10), M.castable, 0, 0.98, z0);
+  });
+  // 冷却水マニホールド
+  [-2.35, 2.35].forEach(x=> addCyl(b, 0.1, 5.4, M.pipeBlue, x, 0.62, 0, Math.PI/2, 0, 0));
+  // 分配樋（z 方向）と導入樋（x 方向）
+  launder(b, 'z', -2.45, 2.45, 0, 1.30, { legs:false, capA:true, capB:true, gap:{ side:-1, range:[-0.26, 0.26] } });
+  launder(b, 'x', -3.62, -0.34, 0, 1.33, { legs:false });
+  [-2.25, -0.75, 0.75, 2.25].forEach(z=> [-0.28, 0.28].forEach(o=> addBox(b, 0.1, 0.56, 0.1, M.steelDark, o, 0.73, z)));
+  [-3.0, -1.8].forEach(x=> [-0.3, 0.3].forEach(o=> addBox(b, 0.1, 0.6, 0.1, M.steelDark, x, 0.75, o)));
+  bakeLocal(b, table.body);
+
+  pathSeg(PATH_MAIN, meltStrip(table.body, 3.24, 0.42, -1.98, 1.33, 0, '+x'), 21.9, 3.24);
+  pathSeg(PATH_MAIN, meltStrip(table.body, 2.3, 0.42, 0, 1.30, 1.15, '+z'), 25.14, 2.3);
+  pathSeg(PATH_MAIN, meltStrip(table.body, 2.3, 0.42, 0, 1.30, -1.15, '-z'), 25.14, 2.3);
+  // 鋳型内の湯面
+  MOLD_Z.forEach(z0=>{
+    const mm = makeMelt({ skin:0.2, scale:3.0, glow:1.2, cx:0, cz:z0 });
+    const pl = dyn(new THREE.Mesh(new THREE.PlaneGeometry(1.58, 0.53).rotateX(-Math.PI/2), mm.mat));
+    pl.position.set(0, MENISCUS, z0); pl.visible = false; table.body.add(pl);
+    table.moldMelt.push({ mesh:pl, u:mm.u });
+  });
+  // 傾動シリンダー（床アンカー ↔ テーブル）
+  [-3.72, 3.72].forEach(z=>{
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 1, 16), M.steel);
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1, 12), M.steelLight);
+    barrel.castShadow = rod.castShadow = true;
+    scene.add(barrel, rod);
+    table.cyl.push({ barrel, rod, A:V3(1.8, 0.5, z), B:V3(6.3, 0.45, z) });
+  });
+})();
+
+/* ---- プラテン・ラム・ボトムブロック ---- */
+const platen = new THREE.Group();
+const ramRod = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 1, 24), M.steelLight);
+(function buildPlaten(){
+  const p = new THREE.Group();
+  addBox(p, 5.8, 0.5, 5.4, M.steel, 0, -0.25, 0);
+  [-2.0, 0, 2.0].forEach(x=> addBox(p, 0.3, 0.5, 5.2, M.steelDark, x, -0.75, 0));
+  [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([sx,sz])=> addBox(p, 0.2, 0.7, 0.3, M.steelDark, sx*2.95, -0.2, sz*2.95));
+  MOLD_Z.forEach(z=>{
+    addBox(p, 1.4, 0.35, 0.45, M.steelDark, 0, 0.175, z);
+    addBox(p, 1.56, 0.3, 0.51, M.alu, 0, 0.5, z);
+  });
+  bakeLocal(p, platen);
+  scene.add(platen);
+  ramRod.castShadow = true; scene.add(ramRod);
+})();
+
+/* ---- スラブ（プール：鋳造中3本 + 置場3本） ---- */
+const slabGeo = new THREE.BoxGeometry(SLAB.W, 1, SLAB.T).translate(0, 0.5, 0);
+const slabs = [];
+for(let i=0;i<6;i++){
+  const { m, u } = makeSlabMaterial();
+  const mesh = new THREE.Mesh(slabGeo, m);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  const g = new THREE.Group(); g.add(mesh); g.visible = false; scene.add(g);
+  slabs.push({ id:i, g, mesh, mat:m, u, state:'free', strand:-1, L:0, hot:0, fade:1, pose:{x:0,y:0,z:0,rx:0} });
+}
+
+/* =====================================================================
+ * 13. 天井クレーン（スラブトング付き）
+ * =================================================================== */
+const crane = { g:new THREE.Group(), trolley:new THREE.Group(), hook:new THREE.Group(), tong:new THREE.Group(), legs:[], ropes:[] };
+(function buildCrane(){
+  const b = new THREE.Group();
+  const span = 30.4;
+  [-0.9, 0.9].forEach(x=>{
+    addBox(b, 0.7, 1.4, span, M.crane, x, 13.0, 0);
+    addBox(b, 0.1, 0.1, span - 1, M.steelDark, x, 13.75, 0);
+  });
+  [-15.0, 15.0].forEach(z=>{
+    addBox(b, 4.4, 0.8, 0.9, M.crane, 0, 12.55, z);
+    [-1.7, 1.7].forEach(x=> addCyl(b, 0.3, 0.3, M.steelDark, x, 12.44, z, Math.PI/2, 0, 0));
+    [-2.25, 2.25].forEach(x=> addBox(b, 0.18, 0.4, 0.4, M.stripe, x, 12.55, z));
+  });
+  for(let z=-13.5; z<=13.5; z+=3) addBox(b, 1.1, 0.12, 0.12, M.crane, 0, 12.4, z);
+  addBox(b, 0.95, 0.05, span - 1.5, M.steel, 1.72, 12.35, 0);
+  for(let z=-14; z<=14; z+=2) addBox(b, 0.04, 1.0, 0.04, M.crane, 2.17, 12.85, z);
+  addBox(b, 0.04, 0.04, span - 1.5, M.crane, 2.17, 13.35, 0);
+  addBox(b, 1.5, 1.7, 1.5, M.crane, -1.1, 11.4, -12.5);
+  add(b, new THREE.BoxGeometry(1.3, 0.8, 0.04), M.glass, -1.1, 11.5, -11.74);
+  add(b, new THREE.BoxGeometry(0.04, 0.8, 1.3), M.glass, -0.34, 11.5, -12.5);
+  addBox(b, 0.12, 0.8, 0.12, M.crane, -1.1, 12.6, -12.5);
+  bakeLocal(b, crane.g);
+  // トロリー
+  const t = new THREE.Group();
+  addBox(t, 2.8, 0.45, 2.6, M.crane, 0, 14.05, 0);
+  [[-0.9,-1.1],[-0.9,1.1],[0.9,-1.1],[0.9,1.1]].forEach(([x,z])=> addCyl(t, 0.22, 0.2, M.steelDark, x, 13.85, z, 0, 0, Math.PI/2));
+  addCyl(t, 0.45, 1.7, M.steelLight, 0, 14.75, -0.35, 0, 0, Math.PI/2, 24);
+  [-0.9, 0.9].forEach(x=> addBox(t, 0.1, 0.9, 0.9, M.crane, x, 14.7, -0.35));
+  addBox(t, 0.9, 0.6, 0.6, M.cabinet, 1.0, 14.6, 0.75);
+  addBox(t, 0.7, 0.7, 0.7, M.steelDark, -1.0, 14.62, 0.7);
+  addBox(t, 0.3, 0.3, 0.3, M.yellow, 0, 14.45, 0.95);
+  bakeLocal(t, crane.trolley);
+  crane.g.add(crane.trolley);
+  for(let i=0;i<4;i++){
+    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 1, 6), M.steelDark);
+    r.userData.off = [ (i<2?-1:1)*0.22, (i%2?-1:1)*0.12 ];
+    crane.trolley.add(r); crane.ropes.push(r);
+  }
+  // フックブロック
+  const h = new THREE.Group();
+  addBox(h, 0.95, 0.7, 0.5, M.crane, 0, 0, 0);
+  [-0.25, 0.25].forEach(x=> addCyl(h, 0.3, 0.52, M.steelDark, x, 0.1, 0, Math.PI/2, 0, 0, 20));
+  addCyl(h, 0.07, 0.2, M.steelLight, 0, -0.44, 0);
+  add(h, new THREE.TorusGeometry(0.16, 0.055, 8, 20, Math.PI*1.5), M.steelLight, 0, -0.62, 0, 0, 0, Math.PI*0.75);
+  addBox(h, 0.97, 0.12, 0.52, M.stripe, 0, -0.3, 0);
+  bakeLocal(h, crane.hook);
+  crane.trolley.add(crane.hook);
+  scene.add(crane.g);
+  // スラブトング（原点 = 吊りピン）
+  const tg = new THREE.Group();
+  add(tg, new THREE.TorusGeometry(0.12, 0.04, 8, 16), M.steelLight, 0, 0, 0);
+  [-0.1, 0.1].forEach(z=> addBox(tg, 0.36, 0.34, 0.05, M.crane, 0, -0.26, z));
+  addBox(tg, 2.0, 0.26, 0.36, M.crane, 0, -0.52, 0);
+  addBox(tg, 2.02, 0.06, 0.38, M.stripe, 0, -0.38, 0);
+  bakeLocal(tg, crane.tong);
+  [-1, 1].forEach(s=>{
+    const leg = new THREE.Group();
+    const lb = new THREE.Group();
+    addBox(lb, 0.14, 1.3, 0.34, M.crane, 0, -0.65, 0);
+    addBox(lb, 0.06, 0.4, 0.3, M.rubber, -s*0.1, -1.1, 0);
+    addCyl(lb, 0.07, 0.4, M.steelLight, 0, 0, 0, Math.PI/2, 0, 0);
+    bakeLocal(lb, leg);
+    leg.position.set(s*0.93, -0.52, 0);
+    leg.userData.s = s;
+    crane.tong.add(leg); crane.legs.push(leg);
+  });
+  scene.add(crane.tong);
+})();
+
+/* =====================================================================
+ * 14. スクラップ装入機（チャージャー）
+ * =================================================================== */
+const charger = { g:new THREE.Group(), boom:new THREE.Group(), pan:new THREE.Group(), wheels:[], cyl:[], beacon:null };
+let panScrap;
+(function buildCharger(){
+  const b = new THREE.Group();
+  addBox(b, 2.5, 0.8, 5.0, M.charger, 0, 1.05, -0.5);
+  addBox(b, 2.2, 0.35, 4.6, M.steelDark, 0, 0.55, -0.5);
+  [-1.32, 1.32].forEach(x=> [1.2, -2.2].forEach(z=> addBox(b, 0.6, 0.12, 1.5, M.charger, x, 1.47, z)));
+  addBox(b, 2.5, 1.0, 0.7, M.steelDark, 0, 1.55, -3.1);
+  addBox(b, 2.52, 0.14, 0.72, M.stripe, 0, 1.2, -3.1);
+  addBox(b, 1.1, 0.75, 1.9, M.charger, 0.65, 1.82, -1.95);
+  addCyl(b, 0.07, 0.9, M.steelDark, 1.0, 2.55, -2.6);
+  // 運転室
+  addBox(b, 1.3, 0.1, 1.7, M.charger, -0.68, 3.22, -1.8);
+  [[-1.28,-2.6],[-1.28,-1.0],[-0.08,-2.6],[-0.08,-1.0]].forEach(([x,z])=> addBox(b, 0.08, 1.75, 0.08, M.charger, x, 2.33, z));
+  add(b, new THREE.BoxGeometry(1.15, 1.5, 0.03), M.glass, -0.68, 2.3, -1.0);
+  add(b, new THREE.BoxGeometry(0.03, 1.5, 1.5), M.glass, -1.28, 2.3, -1.8);
+  add(b, new THREE.BoxGeometry(0.03, 1.5, 1.5), M.glass, -0.08, 2.3, -1.8);
+  addBox(b, 0.5, 0.5, 0.5, M.steelDark, -0.68, 1.75, -2.0);
+  // ブーム支持塔
+  [-0.95, 0.95].forEach(x=> addBox(b, 0.3, 0.9, 0.6, M.steelDark, x, 1.9, -0.2));
+  add(b, new THREE.BoxGeometry(0.16, 0.08, 0.05), M.lamp, 0.9, 1.25, 2.02).castShadow = false;
+  add(b, new THREE.BoxGeometry(0.16, 0.08, 0.05), M.lamp, -0.9, 1.25, 2.02).castShadow = false;
+  bakeLocal(b, charger.g);
+  const bc = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.16, 10), M.beacon);
+  bc.position.set(-0.68, 3.36, -1.8); charger.g.add(bc); charger.beacon = bc;
+  // 車輪
+  [[-1.32, 1.2],[1.32, 1.2],[-1.32,-2.2],[1.32,-2.2]].forEach(([x,z])=>{
+    const w = new THREE.Group(), wb = new THREE.Group();
+    addCyl(wb, 0.62, 0.5, M.rubber, 0, 0, 0, 0, 0, Math.PI/2, 24);
+    addCyl(wb, 0.32, 0.52, M.steelLight, 0, 0, 0, 0, 0, Math.PI/2, 16);
+    addBox(wb, 0.54, 0.1, 0.5, M.steelDark, 0, 0, 0);
+    bakeLocal(wb, w);
+    w.position.set(x, 0.62, z); charger.g.add(w); charger.wheels.push(w);
+  });
+  // ブーム
+  const bm = new THREE.Group();
+  [-0.95, 0.95].forEach(x=> addBox(bm, 0.25, 0.36, 4.4, M.charger, x, 0, 2.2));
+  addCyl(bm, 0.1, 2.0, M.steelDark, 0, 0, 3.3, 0, 0, Math.PI/2);
+  addCyl(bm, 0.14, 2.2, M.steelLight, 0, 0, 0, 0, 0, Math.PI/2);
+  bakeLocal(bm, charger.boom);
+  charger.boom.position.set(0, 2.0, -0.2);
+  charger.g.add(charger.boom);
+  // パン（装入スコップ）
+  const pn = new THREE.Group();
+  addBox(pn, 2.3, 0.1, 2.6, M.steel, 0, -0.35, 1.4);
+  [-1.15, 1.15].forEach(x=> addBox(pn, 0.1, 0.6, 2.6, M.charger, x, -0.05, 1.4));
+  addBox(pn, 2.3, 0.95, 0.12, M.charger, 0, 0.1, 0.1);
+  addBox(pn, 2.3, 0.08, 0.2, M.steelLight, 0, -0.36, 2.75);
+  addCyl(pn, 0.12, 2.1, M.steelLight, 0, 0, 0, 0, 0, Math.PI/2);
+  bakeLocal(pn, charger.pan);
+  charger.pan.position.set(0, 0, 4.4);
+  charger.boom.add(charger.pan);
+  panScrap = new ScrapSet(30, charger.pan);
+  // 起伏シリンダー
+  [-0.95, 0.95].forEach(x=>{
+    const br = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 1, 12), M.steelDark);
+    const rd = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1, 10), M.steelLight);
+    br.castShadow = rd.castShadow = true;
+    charger.g.add(br, rd); charger.cyl.push({ br, rd, x });
+  });
+  scene.add(charger.g);
+})();
+
+/* =====================================================================
+ * 15. スクラップヤード・ドロス受け・スラブ置場・操作室
+ * =================================================================== */
+let bunkerScrap, furnaceScrap;
+const drossFill = new THREE.Mesh(new THREE.PlaneGeometry(1.64, 1.24).rotateX(-Math.PI/2), M.dross);
+(function buildYards(){
+  const g = new THREE.Group(); scene.add(g);
+  // スクラップバンカー（コンクリートブロック壁）
+  addBox(g, 0.6, 2.4, 7.6, M.concreteW, -62.3, 1.2, 8.0);
+  [4.2, 11.8].forEach(z=> addBox(g, 6.2, 2.4, 0.6, M.concreteW, -59.1, 1.2, z));
+  addBox(g, 6.0, 0.08, 7.0, M.steelDark, -59.2, 0.04, 8.0);
+  // ドロス受け箱
+  const dx = -38.5, dz = 8.0;
+  addBox(g, 1.8, 1.1, 0.08, M.steelDark, dx, 0.65, dz - 0.66);
+  addBox(g, 1.8, 1.1, 0.08, M.steelDark, dx, 0.65, dz + 0.66);
+  addBox(g, 0.08, 1.1, 1.4, M.steelDark, dx - 0.86, 0.65, dz);
+  addBox(g, 0.08, 1.1, 1.4, M.steelDark, dx + 0.86, 0.65, dz);
+  addBox(g, 1.8, 0.08, 1.4, M.steelDark, dx, 0.12, dz);
+  [-0.6, 0.6].forEach(z=> addBox(g, 2.0, 0.1, 0.15, M.steelDark, dx, 0.05, dz + z));
+  addBox(g, 1.82, 0.08, 0.1, M.stripe, dx, 1.16, dz + 0.7);
+  // スラブ置場：転倒パッド + 枕木
+  addBox(g, 8.4, YARD.padY, 0.7, M.rubber, 0, YARD.padY/2, YARD.zp + 0.05);
+  [7.3, 9.1, 10.9, 12.5].forEach(z=> addBox(g, 8.4, YARD.padY, 0.26, M.wood, 0, YARD.padY/2, z));
+  [[-4.4, 5.0],[4.4, 5.0],[-4.4, 13.2],[4.4, 13.2]].forEach(([x,z])=>{
+    addCyl(g, 0.09, 1.0, M.yellow, x, 0.5, z, 0,0,0, 10);
+    addCyl(g, 0.095, 0.12, M.steelDark, x, 0.72, z, 0,0,0, 10);
+  });
+  // 操作室（ピット奥・高床）
+  const px = -7.5, pz = -8.6;
+  [[-2.3,-1.6],[2.3,-1.6],[-2.3,1.6],[2.3,1.6]].forEach(([x,z])=> addBox(g, 0.25, 2.7, 0.25, M.frame, px+x, 1.35, pz+z));
+  addBox(g, 5.2, 0.25, 3.8, M.steelDark, px, 2.8, pz);
+  addBox(g, 5.0, 2.5, 3.6, M.panel, px, 4.18, pz - 0.05);
+  addBox(g, 5.3, 0.2, 3.9, M.steelDark, px, 5.5, pz);
+  add(g, new THREE.BoxGeometry(4.4, 1.2, 0.04), M.glass, px, 4.45, pz + 1.77);
+  addBox(g, 4.5, 0.08, 0.1, M.steelDark, px, 3.82, pz + 1.78);
+  add(g, new THREE.BoxGeometry(3.4, 0.55, 0.03), M.screen, px, 4.2, pz + 1.2).castShadow = false;
+  for(let i=0;i<8;i++) addBox(g, 0.9, 0.06, 0.3, M.steel, px - 3.2 - i*0.0, 0.3 + i*0.33, pz - 1.4 + i*0.35);
+  addBox(g, 0.05, 0.05, 3.2, M.yellow, px - 2.75, 2.1, pz - 0.3);
+  bakeStatic(g);
+  drossFill.position.set(dx, 0.2, dz); drossFill.visible = false; drossFill.receiveShadow = true; scene.add(drossFill);
+
+  // スクラップの山（バンカー）
+  bunkerScrap = new ScrapSet(360, scene);
+  bunkerScrap.pieces = [];
+  for(let i=0;i<360;i++){
+    const x = rr(-61.6, -56.3), z = rr(4.8, 11.2);
+    const back = (-56.3 - x)/5.3;
+    const h = 1.7 * (0.35 + 0.65*back) * (1 - Math.pow(Math.abs(z - 8)/3.4, 4));
+    const y = Math.max(0.1, h * (0.5 + 0.5*rnd()));
+    bunkerScrap.pieces.push({ p:V3(x, y, z), q:randQuat(new THREE.Quaternion()), s:V3(rr(0.7,1.4), rr(0.8,1.3), rr(0.7,1.4)), tone:rr(0.7,1.15), key:x + y*0.6 });
+  }
+  bunkerScrap.pieces.sort((a,b)=> b.key - a.key);
+  // 炉内スクラップ（最大4回装入 × 60 片）
+  furnaceScrap = new ScrapSet(240, scene);
+  furnaceScrap.pieces = [];
+  for(let i=0;i<240;i++) furnaceScrap.pieces.push({ on:false, t0:-1, rest:V3(), start:V3(), q:new THREE.Quaternion(), s:V3(1,1,1), tone:1, th:0.5, u:0 });
+  // パン内のスクラップ配置（前方から順に排出）
+  panScrap.pieces = [];
+  for(let i=0;i<30;i++) panScrap.pieces.push({ p:V3(rr(-0.95,0.95), rr(-0.25,0.18), rr(0.35,2.5)), q:randQuat(new THREE.Quaternion()), s:V3(rr(0.7,1.2), rr(0.8,1.2), rr(0.7,1.2)), tone:rr(0.7,1.15) });
+  panScrap.pieces.sort((a,b)=> b.p.z - a.p.z);
+})();
+
+/* =====================================================================
+ * 16. パーティクル（冷却水スプレー・蒸気・排煙・気泡）
+ * =================================================================== */
+const SPRAY_N = 1500;
+const spray = (function(){
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(SPRAY_N*3), vel = new Float32Array(SPRAY_N);
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({ color:new THREE.Color(0.7, 0.9, 1.1), size:0.045, transparent:true, opacity:0.7,
+    blending:THREE.AdditiveBlending, depthWrite:false });
+  const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; scene.add(pts);
+  return { geo, pos, vel, mat, pts };
+})();
+function makeSprites(n, tex, color, opacity){
+  const arr = [];
+  for(let i=0;i<n;i++){
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, color, transparent:true, opacity:0, depthWrite:false }));
+    sp.userData = { t:rnd(), on:0 }; scene.add(sp); arr.push(sp);
+  }
+  return arr;
+}
+const steam = makeSprites(14, texSoft, new THREE.Color(0.95,0.97,1.0));
+const smokeMF = makeSprites(10, texSoft, new THREE.Color(0.55,0.56,0.58));
+const smokeHF = makeSprites(7, texSoft, new THREE.Color(0.55,0.56,0.58));
+const fumeDeg = makeSprites(5, texSoft, new THREE.Color(0.85,0.86,0.88));
+const bubbles = (function(){
+  const N = 90, geo = new THREE.BufferGeometry(), pos = new Float32Array(N*3), life = new Float32Array(N);
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({ color:new THREE.Color(2.4, 1.6, 0.9), size:0.09, transparent:true, opacity:0,
+    blending:THREE.AdditiveBlending, depthWrite:false });
+  mat.toneMapped = false;
+  const p = new THREE.Points(geo, mat); p.frustumCulled = false; scene.add(p);
+  for(let i=0;i<N;i++) life[i] = rnd();
+  return { N, geo, pos, life, mat };
+})();
+
+/* =====================================================================
+ * 17. 炉内・周辺の点光源
+ * =================================================================== */
+const L = {
+  mfIn:   pLight(0xff7a2a, 9,  MF.x, 3.8, 0),
+  mfDoor: pLight(0xff8a3a, 11, MF.x, 4.2, 5.4),
+  hfIn:   pLight(0xff7a2a, 7,  HF.x, 3.0, 0),
+  tap:    pLight(0xff8a30, 7,  -38.5, 3.0, 0.2),
+  laund:  pLight(0xff8a30, 10, -11, 2.6, 0.4),
+  table:  pLight(0xff8a30, 6,  0, 2.6, 0.6),
 };
+
+/* =====================================================================
+ * 18. 設備ラベル（HTML オーバーレイ）
+ * =================================================================== */
+const LBL = [];
+function label(text, pos, dynFn){
+  const el = document.createElement('div');
+  el.className = 'lbl' + (dynFn ? ' dyn' : ''); el.textContent = text;
+  $('labels').appendChild(el);
+  LBL.push({ el, pos, fn:dynFn || null, vis:true });
+}
+label('鋳造炉（溶解・固定式）', V3(MF.x, 7.6, 0));
+label('保持炉（固定式）', V3(HF.x, 6.4, 0));
+label('インライン脱ガス装置', V3(-19.5, 4.0, 0));
+label('CFF フィルター', V3(-13.4, 3.1, 0));
+label('移湯樋', V3(-37.2, 3.2, 0));
+label('鋳造機（3本鋳込み）', V3(-1.5, 2.9, -2.6));
+label('スラブ置場（通路）', V3(0, 1.4, 12.6));
+label('スクラップヤード', V3(-59, 3.3, 8));
+label('操作室', V3(-7.5, 6.3, -8.6));
+label('ドロス受け', V3(-38.5, 1.9, 8));
+label('天井クレーン', null, v=> v.set(crane.g.position.x, 15.2, crane.trolley.position.z));
+label('スクラップ装入機', null, v=> v.set(charger.g.position.x, 4.3, charger.g.position.z));
+
+/* =====================================================================
+ * 19. 状態・シミュレーション
+ * =================================================================== */
+const SET = { speed:60, water:110, target:6.0, strands:3, charges:3, meltT:750, labels:true };
+const RUN = { speed:1, paused:false };
+const S = {};
+const logEl = $('log');
+function fmtT(t){ const m = Math.floor(t/60), s = Math.floor(t%60); return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0'); }
+function log(msg, kind){
+  const li = document.createElement('li');
+  if(kind) li.className = kind;
+  li.innerHTML = `<span class="t">${fmtT(S.t)}</span><span class="m">${msg}</span>`;
+  logEl.prepend(li);
+  while(logEl.children.length > 30) logEl.lastChild.remove();
+}
+function strandList(n){ return n === 1 ? [1] : n === 2 ? [0, 2] : [0, 1, 2]; }
+function needMass(){ return SET.strands * SET.target * TPM + 1.2; }
+
+function initState(){
+  S.t = 0; S.heat = 0; S.castNo = 0; S.yard = 0;
+  S.ml = { st:'', t:0, k:0, n:3, per:0, scrap:0, meltP:0, T0:0, liq0:0, sub:'', amount:0, left:0 };
+  S.cl = { st:'', t:0, L:0, L0:MENISCUS - BLOCK_START, blockTop:BLOCK_START, bt0:BLOCK_START, tilt:0, front:0, tail:0,
+           strands:[], target:6, fill:0, water:0, realT:0, flow:0, done:0 };
+  S.mf = { liq:MF.heel, T:736, door:0, tap:0, burn:0.45, skin:0.3, stir:0, swirl:0 };
+  S.hf = { mass:HF.heel + 0.4, T:716, tap:0, burn:0.3, accept:true, ready:false, bub:0 };
+  S.tr = { front:0, tail:0 };
+  S.ch = { x:P_PARK.x, z:P_PARK.z, psi:Math.PI, beta:6*DEG, gamma:0, wheel:0, queue:[], step:null, load:0, mode:'scrap', dump:-1, moving:0 };
+  S.cr = { cx:CR.parkX, tz:0, pinY:CR.safeY, open:1, rot:0, slab:null, tipping:false, queue:[], step:null };
+  S.rotor = 0; S.dross = 0; S.bunkerVis = 360; S.bunkerTarget = 360; S.loadRemoved0 = 0;
+  S.focus = { key:'overview' }; S.focusT = 0;
+  slabs.forEach(s=>{ s.state = 'free'; s.strand = -1; s.L = 0; s.hot = 0; s.fade = 1; setSlabFade(s, 1); });
+  furnaceScrap.pieces.forEach(p=>{ p.on = false; p.t0 = -1; });
+  logEl.innerHTML = '';
+  mlSet('charge');
+  clSet('wait');
+}
+function setSlabFade(s, f){
+  const tr = f < 0.999;
+  if(s.mat.transparent !== tr){ s.mat.transparent = tr; s.mat.needsUpdate = true; }
+  s.mat.opacity = f; s.mat.depthWrite = !tr;
+}
+
+/* ---------- 装入機（ミッション = 手順リスト） ---------- */
+function bezXZ(P, t){ const u = 1-t;
+  return { x:u*u*u*P[0].x + 3*u*u*t*P[1].x + 3*u*t*t*P[2].x + t*t*t*P[3].x,
+           z:u*u*u*P[0].z + 3*u*u*t*P[1].z + 3*u*t*t*P[2].z + t*t*t*P[3].z }; }
+function makePath(P){
+  const N = 48, acc = [0], samp = [ {x:P[0].x, z:P[0].z} ]; let len = 0;
+  for(let i=1;i<=N;i++){ const p = bezXZ(P, i/N), q = samp[i-1]; len += Math.hypot(p.x-q.x, p.z-q.z); acc.push(len); samp.push(p); }
+  return { acc, samp, len };
+}
+function pathAt(path, s){
+  const a = path.acc; let i = 1;
+  while(i < a.length - 1 && a[i] < s) i++;
+  const f = clamp((s - a[i-1]) / Math.max(1e-6, a[i] - a[i-1]), 0, 1);
+  const p0 = path.samp[i-1], p1 = path.samp[i];
+  return { x:lerp(p0.x, p1.x, f), z:lerp(p0.z, p1.z, f), dx:p1.x - p0.x, dz:p1.z - p0.z };
+}
+function chRun(list){ S.ch.queue = list; S.ch.step = null; }
+const chBusy = ()=> !!(S.ch.step || S.ch.queue.length);
+function chInit(st){
+  const c = S.ch; st.t = 0;
+  if(st.to){
+    const P0 = { x:c.x, z:c.z };
+    const P = st.via ? [P0, st.via[0], st.via[1], st.to]
+      : [P0, { x:lerp(c.x, st.to.x, 1/3), z:lerp(c.z, st.to.z, 1/3) }, { x:lerp(c.x, st.to.x, 2/3), z:lerp(c.z, st.to.z, 2/3) }, st.to];
+    st.path = makePath(P);
+    if(!st.dur) st.dur = st.path.len / (st.speed || 2.6) + 0.9;
+  }
+  st.b0 = c.beta; st.g0 = c.gamma; st.d0 = S.mf.door; st.lastS = 0;
+  if(!st.dur) st.dur = 1;
+  if(st.begin) st.begin();
+}
+function winU(u, w){ return w ? clamp((u - w[0])/(w[1] - w[0]), 0, 1) : u; }
+function chUpdate(dt){
+  const c = S.ch;
+  if(!c.step){ if(!c.queue.length){ c.moving = 0; return; } c.step = c.queue.shift(); chInit(c.step); }
+  const st = c.step; st.t += dt;
+  const u = clamp(st.t / st.dur, 0, 1), e = ease(u);
+  c.moving = st.path ? 1 : 0;
+  if(st.path){
+    const s = st.path.len * e, p = pathAt(st.path, s);
+    c.x = p.x; c.z = p.z;
+    if(Math.abs(p.dx) + Math.abs(p.dz) > 1e-6) c.psi = Math.atan2(p.dx, p.dz) + (st.rev ? Math.PI : 0);
+    c.wheel += (s - st.lastS) / 0.62 * (st.rev ? -1 : 1); st.lastS = s;
+  }
+  if(st.beta !== undefined) c.beta = lerp(st.b0, st.beta*DEG, ease(winU(u, st.bw)));
+  if(st.gamma !== undefined) c.gamma = lerp(st.g0, st.gamma*DEG, e);
+  if(st.door !== undefined) S.mf.door = lerp(st.d0, st.door, ease(winU(u, st.dw)));
+  if(st.on) st.on(u);
+  if(u >= 1){ c.step = null; if(st.end) st.end(); }
+}
+// パン先端（ワールド座標）
+function panPoint(local, out){
+  charger.g.position.set(S.ch.x, 0, S.ch.z); charger.g.rotation.y = S.ch.psi;
+  charger.boom.rotation.x = -S.ch.beta; charger.pan.rotation.x = S.ch.gamma;
+  charger.g.updateMatrixWorld(true);
+  return charger.pan.localToWorld(out.copy(local));
+}
+function missionCharge(k){
+  let removed0 = 0;
+  return [
+    { to:P_BIN0, via:[{x:-46, z:10}, {x:-47.5, z:8}], beta:-17, gamma:4,
+      begin:()=>{ S.ch.mode = 'scrap'; } },
+    { to:P_BIN1, speed:1.0, gamma:4, begin:()=>{ removed0 = 360 - S.bunkerVis; },
+      on:u=>{ S.ch.load = u*0.55; S.bunkerVis = 360 - removed0 - Math.round(u*0.55*28); } },
+    { dur:1.4, gamma:-22, beta:-9, on:u=>{ S.ch.load = 0.55 + 0.45*u; S.bunkerVis = 360 - removed0 - Math.round((0.55 + 0.45*u)*28); } },
+    { to:P_PARK, via:[{x:-49.2, z:8}, {x:-46, z:9.8}], rev:true, beta:6 },
+    { to:P_DOOR, beta:22, bw:[0, 0.3], door:1, dw:[0, 0.3], begin:()=> log(`装入 ${k+1}/${S.ml.n}：炉扉開`) },
+    { dur:1.9, beta:30, gamma:32, begin:()=> startDump(k), on:u=> dumpScrap(k, u) },
+    { dur:0.5 },
+    { dur:1.2, beta:22, gamma:0, begin:()=> finishDump(k) },
+    { to:P_PARK, rev:true, beta:6, door:0, dw:[0.66, 1.0] },
+  ];
+}
+function missionSkim(){
+  let skin0 = 0;
+  return [
+    { to:P_DOOR, beta:21, bw:[0, 0.3], gamma:0, door:1, dw:[0, 0.3], begin:()=>{ S.ch.mode = 'dross'; S.ch.load = 0; log('除滓：炉扉開・スキミング開始'); } },
+    { dur:1.3, beta:21, gamma:8 },
+    { to:{x:-46, z:8.2}, rev:true, speed:0.7, begin:()=>{ skin0 = S.mf.skin; },
+      on:u=>{ S.mf.skin = lerp(skin0, 0.18, u); S.ch.load = 0.85*u; } },
+    { dur:1.0, gamma:-18, beta:24 },
+    { to:P_PARK, rev:true, beta:6, door:0, dw:[0.55, 1.0] },
+    { to:P_DROSS, via:[{x:-46, z:10.3}, {x:-46.6, z:8}], beta:-2 },
+    { dur:1.6, gamma:42, on:u=>{ S.ch.dump = u; },
+      end:()=>{ S.ch.load = 0; S.ch.dump = -1; S.dross = Math.min(1, S.dross + 0.3); log('ドロスをドロス受けへ排出'); } },
+    { dur:1.0, gamma:0 },
+    { to:P_PARK, via:[{x:-46.6, z:8}, {x:-46, z:10.3}], rev:true, beta:6 },
+  ];
+}
+const _tip = new THREE.Vector3();
+function startDump(k){
+  S.ch.dump = 0;
+  panPoint(V3(0, -0.1, 2.3), _tip);
+  const n = S.ml.n, grow = 0.45 + 0.35*(k/Math.max(1, n-1));
+  const lv = mfLevel(S.mf.liq);
+  for(let j=0;j<60;j++){
+    const p = furnaceScrap.pieces[k*60 + j];
+    const x = MF.x + clamp(gauss()*2.2, -3.1, 3.1), z = clamp(0.5 + gauss()*1.5, -2.2, 2.3);
+    const r = clamp(Math.hypot((x - MF.x)/3.2, (z - 0.5)/2.2), 0, 1);
+    p.rest.set(x, lv + 0.06 + (1 - r*r)*grow*rr(0.55, 1.0), z);
+    p.start.set(_tip.x + rr(-0.8, 0.8), _tip.y + rr(-0.2, 0.3), _tip.z + rr(-0.5, 0.5));
+    randQuat(p.q, 0.6); p.s.set(rr(0.7, 1.4), rr(0.8, 1.3), rr(0.7, 1.4));
+    p.tone = rr(0.7, 1.15); p.th = rr(0.12, 0.95); p.u = 0.08 + 0.72*j/60;
+    p.on = true; p.t0 = -1;
+  }
+}
+function dumpScrap(k, u){
+  S.ch.dump = u;
+  for(let j=0;j<60;j++){ const p = furnaceScrap.pieces[k*60 + j]; if(p.t0 < 0 && u >= p.u) p.t0 = S.t; }
+}
+function finishDump(k){
+  for(let j=0;j<60;j++){ const p = furnaceScrap.pieces[k*60 + j]; if(p.t0 < 0) p.t0 = S.t; }
+  S.ch.load = 0; S.ch.dump = -1;
+  const m = S.ml;
+  m.scrap += m.per;
+  S.mf.T = Math.max(668, S.mf.T - 40 * m.per / (S.mf.liq + m.per));
+  m.k++;
+  log(`装入 ${k+1}/${m.n} 完了（${m.per.toFixed(1)} t）`);
+}
+
+/* ---------- 天井クレーン（手順リスト） ---------- */
+function crRun(list){ S.cr.queue = list; S.cr.step = null; }
+const crBusy = ()=> !!(S.cr.step || S.cr.queue.length);
+function crInit(st){
+  const c = S.cr; st.t = 0;
+  switch(st.type){
+    case 'move': {
+      st.x0 = c.cx; st.z0 = c.tz; st.y0 = c.pinY;
+      const dx = st.x !== undefined ? Math.abs(st.x - c.cx) : 0;
+      const dz = st.z !== undefined ? Math.abs(st.z - c.tz) : 0;
+      const dy = st.y !== undefined ? Math.abs(st.y - c.pinY) : 0;
+      const vy = st.slow ? CR.vySlow : (c.slab ? CR.vyL : CR.vy);
+      const d = Math.max(dx/CR.vx, dz/CR.vz, dy/vy);
+      st.dur = d < 0.02 ? 0.001 : d + 0.5;
+      break;
+    }
+    case 'tong': st.o0 = c.open; st.dur = 0.8; break;
+    case 'attach': c.slab = st.slab; st.slab.state = 'crane'; st.dur = 0.001; break;
+    case 'tip': c.tipping = true; st.dur = 6.2; break;
+    case 'release': st.o0 = c.open; st.dur = 0.8; break;
+    case 'relax': st.y0 = c.pinY; st.dur = 2.4; break;
+    case 'call': st.dur = 0.001; st.fn(); break;
+  }
+}
+function tipPose(s, slotX, th){
+  const T = SLAB.T, pz = YARD.zp, py = YARD.padY;
+  const oy = py + T/2*Math.sin(th), oz = pz - T/2*Math.cos(th);
+  s.pose.x = slotX; s.pose.y = oy; s.pose.z = oz; s.pose.rx = th;
+  const r = s.L + PIN_OFF;
+  S.cr.cx = slotX; S.cr.pinY = oy + r*Math.cos(th); S.cr.tz = oz + r*Math.sin(th); S.cr.rot = th;
+}
+function crUpdate(dt){
+  const c = S.cr;
+  if(!c.step){ if(!c.queue.length) return; c.step = c.queue.shift(); crInit(c.step); }
+  const st = c.step; st.t += dt;
+  const u = clamp(st.t / st.dur, 0, 1), e = ease(u);
+  switch(st.type){
+    case 'move':
+      if(st.x !== undefined) c.cx = lerp(st.x0, st.x, e);
+      if(st.z !== undefined) c.tz = lerp(st.z0, st.z, e);
+      if(st.y !== undefined) c.pinY = lerp(st.y0, st.y, e);
+      break;
+    case 'tong': c.open = lerp(st.o0, st.open, e); break;
+    case 'tip': tipPose(st.slab, st.slotX, e * Math.PI/2); break;
+    case 'release': c.open = lerp(st.o0, 1, e); break;
+    case 'relax': c.pinY = st.y0 + 2.1*e; c.rot = Math.PI/2 * (1 - Math.pow(e, 1.5)); break;
+  }
+  if(u >= 1){
+    c.step = null;
+    if(st.type === 'release'){
+      st.slab.state = 'laid'; c.slab = null; c.tipping = false; S.yard++; S.cl.done++;
+      log(`スラブ ${S.cl.done}/${S.cl.strands.length} を置場へ横倒し完了`, 'ok');
+    }
+    if(st.end) st.end();
+  }
+  // 吊り荷の追従
+  if(c.slab && !c.tipping){
+    const s = c.slab;
+    s.pose.x = c.cx; s.pose.y = c.pinY - (s.L + PIN_OFF); s.pose.z = c.tz; s.pose.rx = 0;
+  }
+}
+function craneProgram(){
+  const P = [], cl = S.cl, order = cl.strands.slice().sort((a,b)=> MOLD_Z[b] - MOLD_Z[a]);
+  order.forEach((sIdx, k)=>{
+    const slab = slabs.find(s=> s.state === 'cast' && s.strand === sIdx);
+    if(!slab) return;
+    const slotX = YARD.slotX[k], L = slab.L;
+    if(k === 0){
+      // 待機位置から：傾動したテーブルを越える高さでピット上へ
+      P.push({ type:'move', y:CR.safeY });
+      P.push({ type:'move', x:0, z:MOLD_Z[sIdx] });
+    }else{
+      // 置場から：まず x=0 に戻してから（テーブルを避けて）ピット上へ
+      P.push({ type:'move', y:CR.travelY, x:0 });
+      P.push({ type:'move', z:MOLD_Z[sIdx] });
+    }
+    P.push({ type:'tong', open:1 });
+    P.push({ type:'move', y:HEAD_PICK + PIN_OFF, end:()=> log(`クレーン：スラブ ${k+1} にトング掛け`) });
+    P.push({ type:'tong', open:0 });
+    P.push({ type:'attach', slab });
+    P.push({ type:'move', y:2.4 + L + PIN_OFF });
+    P.push({ type:'move', z:YARD.zp - SLAB.T/2 });
+    P.push({ type:'move', x:slotX });
+    P.push({ type:'move', y:YARD.padY + L + PIN_OFF, slow:true });
+    P.push({ type:'tip', slab, slotX });
+    P.push({ type:'release', slab });
+    P.push({ type:'relax' });
+  });
+  P.push({ type:'move', y:CR.safeY });
+  P.push({ type:'move', x:CR.parkX, z:0 });
+  return P;
+}
+
+/* ---------- 溶解ライン ---------- */
+const ML_LABEL = { charge:'スクラップ装入', melt:'溶解', skim:'攪拌・除滓', ready:'出湯待機', transfer:'移湯', treat:'脱ガス・鎮静' };
+function mlSet(st){
+  const m = S.ml; m.st = st; m.t = 0; m.sub = '';
+  if(st === 'charge'){
+    S.heat++; m.k = 0; m.n = SET.charges; m.scrap = 0; m.meltP = 0;
+    // 炉内の残湯（ヒール超過分）を差し引いて必要スクラップ量を決める
+    m.per = Math.max(3, (needMass() - Math.max(0, S.mf.liq - MF.heel)) / 0.97 / m.n);
+    furnaceScrap.pieces.forEach(p=>{ p.on = false; p.t0 = -1; });
+    log(`HEAT #${S.heat}：スクラップ装入開始（${m.n} 回・計 ${(m.per*m.n).toFixed(1)} t）`, 'hot');
+  }else if(st === 'melt'){
+    m.T0 = S.mf.T; m.liq0 = S.mf.liq;
+    log('溶解開始：バーナー高燃焼', 'hot');
+  }else if(st === 'skim'){
+    m.sub = 'stir';
+    log(`溶解完了 ${S.mf.T.toFixed(0)}℃ → 電磁攪拌`);
+  }else if(st === 'ready'){
+    log('出湯待機（保持炉の空き待ち）');
+  }else if(st === 'transfer'){
+    const need = S.cl.strands.length && ['prep','start','cast'].includes(S.cl.st) ? 0 : needMass() - (S.hf.mass - HF.heel);
+    m.amount = Math.max(0, Math.min(S.mf.liq - MF.heel, need, HF.cap - S.hf.mass));
+    m.left = m.amount; m.sub = 'open'; S.tr.front = 0; S.tr.tail = 0;
+    log(`移湯開始：鋳造炉 → 保持炉（${m.amount.toFixed(1)} t）`, 'hot');
+  }else if(st === 'treat'){
+    log('保持炉：Arガス吹込み脱ガス・成分調整');
+  }
+}
+function updateML(dt){
+  const m = S.ml, mfS = S.mf;
+  m.t += dt;
+  switch(m.st){
+    case 'charge':
+      if(!chBusy()){
+        if(m.k < m.n) chRun(missionCharge(m.k));
+        else mlSet('melt');
+      }
+      break;
+    case 'melt': {
+      const D = 22;
+      m.meltP = clamp(m.t / D, 0, 1);
+      mfS.liq = m.liq0 + m.scrap*0.97*sstep(0.05, 1.0, m.meltP);
+      mfS.T = lerp(m.T0, SET.meltT, sstep(0.3, 1.0, m.meltP)) + Math.sin(S.t*0.9)*0.6;
+      mfS.skin = lerp(0.3, 0.8, sstep(0.6, 1.0, m.meltP));
+      S.bunkerVis = Math.min(360, S.bunkerVis + dt*14);
+      if(m.meltP >= 1){ m.scrap = 0; furnaceScrap.pieces.forEach(p=> p.on = false); mlSet('skim'); }
+      break;
+    }
+    case 'skim':
+      if(m.sub === 'stir'){
+        mfS.stir = sstep(0, 1, m.t) * (1 - sstep(4.0, 5.0, m.t));
+        mfS.skin = Math.max(mfS.skin, lerp(0.8, 0.96, sstep(0, 4.5, m.t)));
+        if(m.t >= 5.0){ m.sub = 'skim'; chRun(missionSkim()); }
+      }else if(!chBusy()){
+        mlSet('ready');
+      }
+      break;
+    case 'ready':
+      mfS.T = lerp(mfS.T, SET.meltT - 4, dt*0.05);
+      if(S.hf.accept) mlSet('transfer');
+      break;
+    case 'transfer': {
+      const tr = S.tr;
+      if(m.sub === 'open'){
+        mfS.tap = sstep(0, 1.2, m.t);
+        if(m.t >= 1.2){ m.sub = 'flow'; m.t = 0; }
+      }else if(m.sub === 'flow'){
+        tr.front = Math.min(7.1, tr.front + 4.5*dt);
+        if(tr.front >= 7.1){
+          const rate = Math.max(m.amount, 1) / 9.0, dm = Math.min(rate*dt, m.left);
+          const T = mfS.T - 6;
+          S.hf.T = (S.hf.mass*S.hf.T + dm*T) / (S.hf.mass + dm);
+          S.hf.mass += dm; mfS.liq -= dm; m.left -= dm;
+        }
+        if(m.left <= 1e-4){ m.sub = 'close'; m.t = 0; }
+      }else if(m.sub === 'close'){
+        mfS.tap = 1 - sstep(0, 1.0, m.t);
+        tr.tail = Math.min(7.1, tr.tail + 4.5*dt);
+        if(tr.tail >= 7.1 && m.t > 1.6){
+          tr.front = tr.tail = 0;
+          S.hf.accept = false;
+          log(`移湯完了：保持炉 ${S.hf.mass.toFixed(1)} t / ${S.hf.T.toFixed(0)}℃`);
+          mlSet('treat');
+        }
+      }
+      break;
+    }
+    case 'treat':
+      S.hf.bub = sstep(0, 1, m.t) * (1 - sstep(6.0, 7.0, m.t));
+      S.hf.T = lerp(S.hf.T, 732, dt*0.35);
+      if(m.t >= 7.0){ S.hf.ready = true; log('保持炉：鋳造準備完了', 'ok'); mlSet('charge'); }
+      break;
+  }
+}
+
+/* ---------- 鋳造ライン ---------- */
+const CL_LABEL = { wait:'溶湯待ち', prep:'鋳造準備', start:'注湯開始', cast:'定常鋳造中', end:'鋳造終了', tilt:'テーブル傾動',
+  raise:'スラブ引上げ', unload:'クレーン搬出', reset:'段取り復帰' };
+const MOLD_S = z=> 25.14 + Math.abs(z) + 0.1;     // 各鋳型へ溶湯が届く経路距離
+const PATH_END = 27.5;
+function clSet(st){
+  const c = S.cl; c.st = st; c.t = 0;
+  switch(st){
+    case 'wait': break;
+    case 'prep':
+      c.strands = strandList(SET.strands); c.target = SET.target; c.L = 0; c.fill = 0; c.realT = 0; c.done = 0;
+      S.castNo++;
+      c.strands.forEach(si=>{
+        const s = slabs.find(x=> x.state === 'free');
+        if(s){ s.state = 'cast'; s.strand = si; s.L = 0; s.hot = 1; s.fade = 1; setSlabFade(s, 1); }
+      });
+      log(`CAST #${S.castNo}：鋳造準備（${c.strands.length} 本 × ${c.target.toFixed(1)} m）`);
+      break;
+    case 'start':
+      S.hf.ready = false; c.front = 0; c.tail = 0;
+      slabs.forEach(s=>{ if(s.state === 'laid') s.state = 'fade'; });
+      log('注湯開始：保持炉出湯 → 脱ガス → CFF → 鋳型', 'hot');
+      break;
+    case 'cast': log('スタートアップ完了：定常鋳造へ移行', 'ok'); break;
+    case 'end':
+      c.bt0 = c.blockTop; S.hf.accept = true;
+      log(`鋳造終了：鋳造長 ${c.L.toFixed(2)} m（実時間 ${fmtH(c.realT)}）`, 'ok');
+      break;
+    case 'tilt': log('鋳造テーブル傾動（80°）'); break;
+    case 'raise': c.bt0 = c.blockTop; log('プラテン上昇：スラブ頭部を床上へ'); break;
+    case 'unload': crRun(craneProgram()); log('天井クレーンでスラブ搬出開始'); break;
+    case 'reset': c.bt0 = c.blockTop; log('段取り復帰：テーブル戻し・ボトムブロック挿入'); break;
+  }
+}
+function fmtH(sec){ const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60); return h + ':' + String(m).padStart(2,'0'); }
+function updateCL(dt){
+  const c = S.cl; c.t += dt;
+  const castSlabs = slabs.filter(s=> s.state === 'cast');
+  switch(c.st){
+    case 'wait':
+      c.blockTop = BLOCK_START; c.tilt = 0;
+      if(S.hf.ready) clSet('prep');
+      break;
+    case 'prep':
+      if(c.t >= 2.5) clSet('start');
+      break;
+    case 'start': {
+      S.hf.tap = sstep(0, 1.0, c.t);
+      if(c.t > 0.8) c.front = Math.min(PATH_END, c.front + FRONT_V*dt);
+      const far = Math.max(...c.strands.map(si=> MOLD_S(MOLD_Z[si])));
+      if(c.front >= far){
+        const df = Math.min(1 - c.fill, dt/2.2);
+        c.fill += df;
+        S.hf.mass -= c.strands.length * TPM * c.L0 * df;
+      }
+      c.L = c.fill * c.L0; c.blockTop = BLOCK_START;
+      c.water = sstep(0, 1, c.fill*1.5);
+      if(c.fill >= 1) clSet('cast');
+      break;
+    }
+    case 'cast': {
+      const v = SET.speed * (0.6 + 0.4*sstep(0, 0.3, c.L - c.L0));
+      const dL = v/60000 * CAST_K * dt;
+      c.L = Math.min(c.target, c.L + dL);
+      c.realT += dt * CAST_K;
+      c.blockTop = MENISCUS - c.L;
+      c.water = 1;
+      S.hf.mass -= c.strands.length * TPM * dL;
+      S.hf.T -= dt*0.06;
+      if(c.L >= c.target - 1e-6 || S.hf.mass <= HF.heel + 0.15){
+        if(S.hf.mass <= HF.heel + 0.15) log('保持炉溶湯が下限に到達', 'hot');
+        clSet('end');
+      }
+      break;
+    }
+    case 'end':
+      S.hf.tap = 1 - sstep(0, 0.8, c.t);
+      c.tail = Math.min(PATH_END + 0.5, c.tail + FRONT_V*dt);
+      c.blockTop = c.bt0 - (MENISCUS - HEAD_LOW) * ease(clamp((c.t - 1.4)/3.6, 0, 1));
+      c.water = 1 - sstep(4.5, 6.5, c.t);
+      if(c.t >= 7.0){ c.front = c.tail = 0; clSet('tilt'); }
+      break;
+    case 'tilt':
+      c.tilt = TABLE.maxTilt * ease(clamp(c.t/5, 0, 1));
+      if(c.t >= 5.3) clSet('raise');
+      break;
+    case 'raise':
+      c.blockTop = lerp(c.bt0, HEAD_PICK - c.L, ease(clamp(c.t/5, 0, 1)));
+      if(c.t >= 5.3) clSet('unload');
+      break;
+    case 'unload':
+      if(!crBusy()) clSet('reset');
+      break;
+    case 'reset':
+      c.tilt = TABLE.maxTilt * (1 - ease(clamp(c.t/4, 0, 1)));
+      c.blockTop = lerp(c.bt0, BLOCK_START, ease(clamp((c.t - 4.3)/4.2, 0, 1)));
+      if(c.t >= 8.8){ c.L = 0; clSet('wait'); }
+      break;
+  }
+  // 鋳造中スラブの姿勢
+  castSlabs.forEach(s=>{
+    s.L = c.L; s.pose.x = 0; s.pose.y = c.blockTop; s.pose.z = MOLD_Z[s.strand]; s.pose.rx = 0;
+  });
+  // スラブの冷却・撤去
+  slabs.forEach(s=>{
+    if(s.state === 'free') return;
+    const castingNow = s.state === 'cast' && (c.st === 'start' || c.st === 'cast');
+    if(!castingNow) s.hot = Math.max(0, s.hot - dt * (s.hot > 0.4 ? 0.12 : 0.03));
+    if(s.state === 'fade'){
+      s.fade -= dt/2.5;
+      if(s.fade <= 0){ s.state = 'free'; s.fade = 1; S.yard = Math.max(0, S.yard - 1); if(S.yard === 0) log('前回スラブを次工程（均質化炉）へ搬出'); }
+    }
+  });
+}
+
+/* ---------- 温度・燃焼など ---------- */
+function updateThermal(dt){
+  const m = S.ml, mfS = S.mf, hfS = S.hf;
+  const burnT = { charge:0.45, melt:1.0, skim:0.4, ready:0.3, transfer:0.3, treat:0.35 }[m.st] || 0.3;
+  mfS.burn = lerp(mfS.burn, burnT, 1 - Math.exp(-dt*1.2));
+  if(m.st !== 'melt' && m.st !== 'charge') mfS.T = lerp(mfS.T, SET.meltT - 6, dt*0.02);
+  if(m.st === 'charge') mfS.T = lerp(mfS.T, 740, dt*0.01);
+  if(m.st !== 'skim') mfS.stir = Math.max(0, mfS.stir - dt);
+  if(m.st !== 'melt' && m.st !== 'skim') mfS.skin = lerp(mfS.skin, 0.28, dt*0.1);
+  mfS.swirl += mfS.stir * dt * 1.4 + (m.st === 'melt' ? dt*0.15 : 0);
+  if(m.st !== 'transfer') mfS.tap = Math.max(0, mfS.tap - dt);
+  const hfT = 732;
+  hfS.burn = lerp(hfS.burn, clamp((hfT + 8 - hfS.T)/22, 0.15, 0.95), 1 - Math.exp(-dt*0.8));
+  if(S.cl.st !== 'cast') hfS.T = lerp(hfS.T, hfT, dt*0.03);
+  if(m.st !== 'treat') hfS.bub = Math.max(0, hfS.bub - dt);
+  if(!['start','cast','end'].includes(S.cl.st)) hfS.tap = Math.max(0, hfS.tap - dt);
+  const rotT = ['start','cast'].includes(S.cl.st) ? 1 : (S.cl.st === 'prep' || (S.cl.st === 'end' && S.cl.t < 4) ? 0.6 : 0);
+  S.rotor = lerp(S.rotor, rotT, 1 - Math.exp(-dt*0.8));
+}
+
+function simStep(dt){
+  S.t += dt;
+  updateML(dt);
+  updateCL(dt);
+  chUpdate(dt);
+  crUpdate(dt);
+  updateThermal(dt);
+}
+
+/* =====================================================================
+ * 20. 描画更新（状態 → シーン）
+ * =================================================================== */
+const _p = new THREE.Vector3(), _a = new THREE.Vector3(), _b = new THREE.Vector3();
+function fillStrips(list, front, tail){
+  list.forEach(sg=>{
+    const b = clamp((front - sg.s0)/sg.len, 0, 1), a = clamp((tail - sg.s0)/sg.len, 0, 1);
+    sg.strip.mesh.visible = b > a + 0.001;
+    sg.strip.u.uFillA.value = a; sg.strip.u.uFillB.value = b;
+  });
+}
+function streamBetween(mesh, x, y1, z, y2, on){
+  mesh.visible = on && y1 - y2 > 0.02;
+  if(!mesh.visible) return;
+  mesh.position.set(x, (y1 + y2)/2, z); mesh.scale.set(1, y1 - y2, 1);
+}
+function updateVisuals(dt, rt){
+  const t = S.t;
+  const mfS = S.mf, hfS = S.hf, cl = S.cl;
+  MELTS.forEach(u=> u.uTime.value = t);
+  FLAMES.forEach(u=> u.uTime.value = t);
+
+  /* --- 鋳造炉（溶解） --- */
+  const mfHeat = clamp((mfS.T - 620)/140, 0, 1);
+  const mfLv = mfLevel(mfS.liq);
+  mf.bath.position.y = mfLv;
+  mf.bathU.uSkin.value = mfS.skin; mf.bathU.uSwirl.value = mfS.swirl; mf.bathU.uGlow.value = 0.75 + 0.45*mfHeat;
+  M.mfRefr.emissiveIntensity = 0.12 + 0.55*mfHeat*(0.55 + 0.45*mfS.burn);
+  M.peepMF.color.setRGB(2.2, 0.75, 0.16).multiplyScalar(0.35 + 0.65*mfS.burn);
+  mf.flames.forEach((f,i)=>{
+    const k = mfS.burn, fl = 1 + Math.sin(t*23 + i*2)*0.05 + Math.sin(t*37 + i)*0.04;
+    f.scale.set(0.7 + 0.35*k, (0.45 + 0.65*k)*fl, 0.7 + 0.35*k);
+    f.material.uniforms.uPower.value = 0.35 + 0.8*k;
+  });
+  L.mfIn.intensity = (1.2 + 2.2*mfS.burn) * (0.93 + Math.sin(t*9.1)*0.07);
+  const doorOpen = mfS.door;
+  mf.door.position.y = (MF.sill + MF.doorTop)/2 + doorOpen*2.7;
+  mf.cw.forEach(cw=> cw.position.y = 7.3 - doorOpen*2.5);
+  mf.chains.forEach(ch=>{ const top = 8.6, bot = mf.door.position.y + mf.doorH/2 + 0.1; ch.scale.y = Math.max(0.05, top - bot); ch.position.y = (top + bot)/2; });
+  L.mfDoor.intensity = doorOpen * (2.2 + 1.6*mfS.burn) * (0.9 + Math.sin(t*11)*0.1);
+  mf.plug.rotation.z = mfS.tap * 0.75;
+  streamBetween(mf.stream, MF.x + MF.hx + 1.15, 2.42, 0, 2.24, mfS.tap > 0.6 && S.tr.front > 0.1 && S.tr.tail < 0.2);
+  L.tap.intensity = (mfS.tap > 0.5 && S.tr.front > 0 && S.tr.tail < 7) ? 2.4 : 0;
+
+  // 炉内スクラップ
+  const meltP = S.ml.st === 'melt' ? S.ml.meltP : 0;
+  furnaceScrap.pieces.forEach((p,i)=>{
+    if(!p.on || p.t0 < 0){ furnaceScrap.hide(i); return; }
+    const f = clamp((t - p.t0)/0.5, 0, 1);
+    _p.set(lerp(p.start.x, p.rest.x, f), lerp(p.start.y, p.rest.y, f*f), lerp(p.start.z, p.rest.z, f));
+    let heat = 0.1 * sstep(0, 10, t - p.t0);
+    let sc = 1;
+    if(S.ml.st === 'melt'){
+      heat = Math.max(heat, sstep(p.th - 0.35, p.th, meltP));
+      _p.y -= 0.45*sstep(p.th - 0.3, p.th + 0.04, meltP);
+      sc = 1 - sstep(p.th, p.th + 0.06, meltP);
+    }
+    if(sc <= 0.01){ furnaceScrap.hide(i); return; }
+    _v2.copy(p.s).multiplyScalar(sc);
+    furnaceScrap.set(i, _p, p.q, _v2, heat, p.tone);
+  });
+  furnaceScrap.commit();
+
+  // バンカーの山
+  const bv = Math.round(S.bunkerVis);
+  if(bv !== bunkerScrap.lastVis){
+    bunkerScrap.pieces.forEach((p,i)=>{
+      if(i < 360 - bv) bunkerScrap.hide(i); else bunkerScrap.set(i, p.p, p.q, p.s, 0, p.tone);
+    });
+    bunkerScrap.commit(); bunkerScrap.lastVis = bv;
+  }
+  drossFill.visible = S.dross > 0.01;
+  drossFill.position.y = 0.2 + S.dross*0.75;
+
+  /* --- 装入機 --- */
+  const ch = S.ch;
+  charger.g.position.set(ch.x, 0, ch.z); charger.g.rotation.y = ch.psi;
+  charger.boom.rotation.x = -ch.beta; charger.pan.rotation.x = ch.gamma;
+  charger.wheels.forEach(w=> w.rotation.x = ch.wheel);
+  charger.beacon.visible = ch.moving ? (Math.sin(t*14) > 0) : true;
+  charger.g.updateMatrixWorld(true);
+  charger.cyl.forEach(cy=>{
+    _a.set(cy.x, 1.25, 1.6);
+    _b.set(cy.x, -0.18, 2.2).applyAxisAngle(V3(1,0,0), -ch.beta).add(charger.boom.position);
+    const dir = _v1.copy(_b).sub(_a), len = dir.length(); dir.normalize();
+    const bl = 1.1;
+    orientBetween(cy.br, _a, _v2.copy(_a).addScaledVector(dir, bl));
+    orientBetween(cy.rd, _v2.copy(_a).addScaledVector(dir, Math.min(bl - 0.1, len - 0.05)), _b);
+  });
+  panScrap.pieces.forEach((p,j)=>{
+    const vis = j < Math.round(ch.load * 30);
+    if(!vis){ panScrap.hide(j); return; }
+    let sl = 0;
+    if(ch.dump >= 0) sl = clamp((ch.dump - (0.06 + 0.7*j/30))/0.24, 0, 1);
+    if(sl >= 1){ panScrap.hide(j); return; }
+    _p.set(p.p.x, p.p.y - sl*0.6, p.p.z + sl*2.4);
+    const dross = ch.mode === 'dross';
+    _v2.copy(p.s).multiplyScalar(dross ? 0.75 : 1);
+    panScrap.set(j, _p, p.q, _v2, dross ? (j%4 ? 0.02 : 0.28) : 0, dross ? 0.22 : p.tone);
+  });
+  panScrap.commit();
+
+  /* --- 移湯・保持炉 --- */
+  fillStrips(PATH_TR, S.tr.front, S.tr.tail);
+  const hfHeat = clamp((hfS.T - 620)/140, 0, 1);
+  const hfLv = hfLevel(hfS.mass);
+  hf.bath.position.y = hfLv;
+  hf.bathU.uGlow.value = 0.7 + 0.45*hfHeat;
+  M.hfRefr.emissiveIntensity = 0.1 + 0.45*hfHeat*(0.5 + 0.5*hfS.burn);
+  M.peepHF.color.setRGB(2.2, 0.75, 0.16).multiplyScalar(0.3 + 0.7*hfS.burn);
+  hf.flames.forEach(f=>{
+    const k = hfS.burn, fl = 1 + Math.sin(t*21)*0.05;
+    f.scale.set(0.7 + 0.3*k, (0.45 + 0.6*k)*fl, 0.7 + 0.3*k);
+    f.material.uniforms.uPower.value = 0.3 + 0.8*k;
+  });
+  L.hfIn.intensity = (0.9 + 1.8*hfS.burn) * (0.93 + Math.sin(t*8.3)*0.07);
+  streamBetween(hf.inStream, HF.x - HF.hx + 0.9, 2.12, 0, hfLv, S.tr.front >= 7.05 && S.tr.tail < 7.0);
+  hf.stopper.position.y = 1.75 + hfS.tap*0.45;
+  streamBetween(hf.tapStream, HF.x + HF.hx + 1.12, 1.58, 0, 1.46, hfS.tap > 0.5 && cl.front > 0.2 && cl.tail < 0.3);
+  // 気泡（脱ガス）
+  {
+    const bp = bubbles.pos, on = hfS.bub;
+    bubbles.mat.opacity = on * 0.9;
+    if(on > 0.01){
+      for(let i=0;i<bubbles.N;i++){
+        bubbles.life[i] += dt * 1.6;
+        if(bubbles.life[i] > 1){ bubbles.life[i] = 0; bp[i*3] = HF.x + rr(-2.6, 2.6); bp[i*3+2] = rr(-1.9, 1.9); }
+        bp[i*3+1] = hfLv + 0.02 + Math.sin(bubbles.life[i]*Math.PI)*0.05;
+      }
+      bubbles.geo.attributes.position.needsUpdate = true;
+    }
+  }
+
+  /* --- 主樋・脱ガス・CFF --- */
+  fillStrips(PATH_MAIN, cl.front, cl.tail);
+  deg.rotors.forEach((r,i)=> r.rotation.y += dt * S.rotor * 14 * (i ? 1 : -1));
+  const flowing = cl.front > 0 && cl.tail < PATH_END;
+  L.laund.intensity = flowing ? 2.0*(0.92 + Math.sin(t*7)*0.08) : 0;
+
+  /* --- 鋳造テーブル・シリンダー --- */
+  table.pivot.rotation.z = -cl.tilt;
+  table.pivot.updateMatrixWorld(true);
+  table.cyl.forEach(cy=>{
+    const A = table.body.localToWorld(_a.copy(cy.A)), B = cy.B;
+    const dir = _v1.copy(A).sub(B), len = dir.length(); dir.normalize();
+    orientBetween(cy.barrel, B, _v2.copy(B).addScaledVector(dir, 2.3));
+    orientBetween(cy.rod, _v2.copy(B).addScaledVector(dir, Math.min(2.2, len - 0.1)), A);
+  });
+  const meniscusNow = cl.blockTop + cl.L;
+  table.moldMelt.forEach((mm, i)=>{
+    const active = cl.strands.includes(i) && (cl.st === 'start' || cl.st === 'cast') && cl.fill > 0.02;
+    mm.mesh.visible = active;
+    if(active) mm.mesh.position.y = meniscusNow + 0.006;
+  });
+  const tableGlow = (cl.st === 'cast' || cl.st === 'start') ? 1 : (cl.st === 'end' ? 1 - sstep(0, 4, cl.t) : 0);
+  L.table.intensity = tableGlow * 2.6 * (0.92 + Math.sin(t*6.3)*0.08);
+
+  /* --- プラテン・ラム --- */
+  platen.position.y = cl.blockTop - 0.65;
+  const rodTop = cl.blockTop - 0.65 - 1.0, rodBase = -PIT.depth + 0.7;
+  const rl = Math.max(0.05, rodTop - rodBase);
+  ramRod.scale.y = rl; ramRod.position.y = rodBase + rl/2;
+
+  /* --- スラブ --- */
+  slabs.forEach(s=>{
+    s.g.visible = s.state !== 'free';
+    if(!s.g.visible) return;
+    s.g.position.set(s.pose.x, s.pose.y, s.pose.z);
+    s.g.rotation.set(s.pose.rx, 0, 0);
+    s.mesh.scale.y = Math.max(0.002, s.L);
+    s.u.uLen.value = Math.max(0.002, s.L); s.u.uHot.value = s.hot;
+    if(s.state === 'fade') setSlabFade(s, Math.max(0, s.fade));
+  });
+
+  /* --- 天井クレーン --- */
+  const cr = S.cr;
+  crane.g.position.x = cr.cx;
+  crane.trolley.position.z = cr.tz;
+  crane.hook.position.y = cr.pinY + 0.62;
+  const hookTop = cr.pinY + 0.62 + 0.35;
+  crane.ropes.forEach(r=>{
+    const top = 13.85, len = Math.max(0.05, top - hookTop);
+    r.scale.y = len; r.position.set(r.userData.off[0], hookTop + len/2, r.userData.off[1]);
+  });
+  crane.tong.position.set(cr.cx, cr.pinY, cr.tz);
+  crane.tong.rotation.set(cr.rot, 0, 0);
+  crane.legs.forEach(l=> l.rotation.z = l.userData.s * cr.open * 14 * DEG);
+
+  /* --- 冷却水スプレー --- */
+  const wk = cl.water * SET.water/110;
+  spray.mat.opacity = cl.water > 0.02 ? 0.35 + 0.35*Math.min(1.3, wk) : 0;
+  spray.pts.visible = cl.water > 0.02 && cl.strands.length > 0;
+  if(spray.pts.visible){
+    const P = spray.pos, bottom = Math.max(cl.blockTop + 0.02, 0.42 - 3.2), ns = cl.strands.length;
+    for(let i=0;i<SPRAY_N;i++){
+      let y = P[i*3+1] - (2.4 + (i%7)*0.25) * Math.min(1.4, 0.6 + 0.5*wk) * dt;
+      if(y < bottom || spray.vel[i] === 0 || y > 0.43){
+        const si = cl.strands[i % ns], z0 = MOLD_Z[si], side = (i*7 + (t*60|0)) % 4;
+        let x, z;
+        if(side < 2){ x = rr(-0.8, 0.8); z = z0 + (side ? 1 : -1)*(SLAB.T/2 + 0.03); }
+        else { x = (side === 2 ? -1 : 1)*(SLAB.W/2 + 0.03); z = z0 + rr(-0.27, 0.27); }
+        P[i*3] = x; P[i*3+2] = z; y = 0.42 - rnd()*0.3; spray.vel[i] = 1;
+      }
+      P[i*3+1] = y;
+    }
+    spray.geo.attributes.position.needsUpdate = true;
+  }
+  // 蒸気
+  steam.forEach((sp,i)=>{
+    const d = sp.userData; d.t += dt*0.28;
+    if(d.t > 1){ d.t = 0; const si = cl.strands.length ? cl.strands[i % cl.strands.length] : 1;
+      d.x = rr(-1.2, 1.2); d.z = MOLD_Z[si] + rr(-0.6, 0.6); d.y0 = i%3 ? rr(-2.0, 0.2) : PIT.waterY + 0.2; }
+    const k = d.t, on = clamp(cl.water, 0, 1);
+    sp.position.set(d.x||0, (d.y0||0) + k*3.0, d.z||0);
+    sp.material.opacity = Math.sin(k*Math.PI) * 0.22 * on;
+    const s = 1.2 + k*2.4; sp.scale.set(s, s, 1);
+  });
+  // 煙突の排煙
+  const puff = (arr, x, y, z, k, rate)=> arr.forEach(sp=>{
+    const d = sp.userData; d.t += dt*rate;
+    if(d.t > 1){ d.t = 0; d.dx = rr(-0.3, 0.3); d.dz = rr(-0.3, 0.3); }
+    const q = d.t;
+    sp.position.set(x + (d.dx||0) + q*2.2, y + q*6, z + (d.dz||0) + q*0.8);
+    sp.material.opacity = Math.sin(q*Math.PI) * 0.16 * k;
+    const s = 1.5 + q*4.5; sp.scale.set(s, s, 1);
+  });
+  puff(smokeMF, MF.x, 24.2, MF.z - MF.hz - 5.4, 0.3 + 0.7*mfS.burn, 0.12);
+  puff(smokeHF, HF.x + 1.8, 19.2, HF.z - HF.hz - 3.9, 0.25 + 0.5*hfS.burn, 0.14);
+  puff(fumeDeg, deg.x - 1.5, 3.3, 0.8, S.rotor, 0.25);
+}
+
+/* =====================================================================
+ * 21. カメラ（オービット・プリセット・自動追従）
+ * =================================================================== */
+const cam = { target:V3(-22, 1, 2), theta:1.05, phi:0.98, dist:74, anim:null };
 function applyCamera(){
   const sp = Math.sin(cam.phi), cp = Math.cos(cam.phi);
-  camera.position.set(
-    cam.target.x + cam.dist * sp * Math.cos(cam.theta),
-    cam.target.y + cam.dist * cp,
-    cam.target.z + cam.dist * sp * Math.sin(cam.theta)
-  );
+  camera.position.set(cam.target.x + cam.dist*sp*Math.cos(cam.theta), cam.target.y + cam.dist*cp, cam.target.z + cam.dist*sp*Math.sin(cam.theta));
   camera.lookAt(cam.target);
 }
+function sphFrom(pos, tgt){
+  const off = _v1.copy(pos).sub(tgt), dist = off.length();
+  return { dist, phi:Math.acos(clamp(off.y/dist, -1, 1)), theta:Math.atan2(off.z, off.x) };
+}
+// 縦長画面では引きで見せる
+const aspectK = ()=> camera.aspect < 1 ? 1 + (1 - camera.aspect)*1.1 : 1;
 function flyTo(pos, tgt, dur){
-  const off = new THREE.Vector3().subVectors(pos, tgt);
-  const dist = off.length();
-  const phi = Math.acos(THREE.MathUtils.clamp(off.y / dist, -1, 1));
-  let theta = Math.atan2(off.z, off.x);
-  // 最短回転方向に正規化
-  while(theta - cam.theta >  Math.PI) theta -= Math.PI*2;
-  while(theta - cam.theta < -Math.PI) theta += Math.PI*2;
-  cam.anim = {
-    t: 0, dur: dur || 1.1,
-    from: { theta:cam.theta, phi:cam.phi, dist:cam.dist, target:cam.target.clone() },
-    to:   { theta, phi, dist, target:tgt.clone() },
-  };
+  const s = sphFrom(pos, tgt);
+  s.dist *= aspectK();
+  let th = s.theta;
+  while(th - cam.theta > Math.PI) th -= Math.PI*2;
+  while(th - cam.theta < -Math.PI) th += Math.PI*2;
+  cam.anim = { t:0, dur:dur || 1.4, from:{ theta:cam.theta, phi:cam.phi, dist:cam.dist, target:cam.target.clone() },
+               to:{ theta:th, phi:s.phi, dist:s.dist, target:tgt.clone() } };
 }
 const CAM_PRESETS = {
-  overview: [ new THREE.Vector3(20, 13, 26),  new THREE.Vector3(-8, 1, 0) ],
-  table:    [ new THREE.Vector3(6.5, 4, 8.5), new THREE.Vector3(0, 1.1, 0) ],
-  pit:      [ new THREE.Vector3(9, 0.5, 11),  new THREE.Vector3(0, -3, 0) ],
-  melt:     [ new THREE.Vector3(-13, 5.5, 11),new THREE.Vector3(-19, 1.5, 0) ],
+  overview: [V3(12, 40, 58),     V3(-22, 1, 1)],
+  mf:       [V3(-40.5, 15, 8.8),  V3(-46.5, 2.4, 1.0)],
+  hf:       [V3(-25.5, 13.5, 8),  V3(-30.5, 1.8, 0)],
+  launder:  [V3(-8, 7.5, 12),    V3(-17, 1.2, 0)],
+  table:    [V3(6.5, 9.0, 7.5),  V3(0, 0.9, 0)],
+  pit:      [V3(10.5, -1.8, 12), V3(0, -3.8, 0)],
+  yard:     [V3(11, 8.5, 14.8),  V3(0, 1.2, 7.5)],
+  crane:    [V3(17, 14.5, 14.2), V3(0, 4.5, 3.5)],
 };
-document.querySelectorAll('[data-cam]').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    const p = CAM_PRESETS[b.dataset.cam];
-    if(b.dataset.cam === 'pit' && !$('tg-pit').checked){
-      $('tg-pit').checked = true;
-      $('tg-pit').dispatchEvent(new Event('change'));
-    }
-    flyTo(p[0], p[1]);
-  });
-});
-
-// マウス操作
-let dragBtn = -1, lastX = 0, lastY = 0;
-const dom = renderer.domElement;
-dom.addEventListener('contextmenu', e=> e.preventDefault());
-dom.addEventListener('mousedown', e=>{ dragBtn = e.button; lastX = e.clientX; lastY = e.clientY; });
-window.addEventListener('mouseup', ()=> dragBtn = -1);
-window.addEventListener('mousemove', e=>{
-  if(dragBtn < 0) return;
-  const dx = e.clientX - lastX, dy = e.clientY - lastY;
-  lastX = e.clientX; lastY = e.clientY;
-  cam.anim = null;
-  if(dragBtn === 0){
-    cam.theta += dx * 0.0055;
-    cam.phi = THREE.MathUtils.clamp(cam.phi - dy * 0.0045, 0.08, 1.52);
-  }else if(dragBtn === 2 || dragBtn === 1){
-    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
-    const up = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1);
-    const k = cam.dist * 0.0012;
-    cam.target.addScaledVector(right, -dx * k).addScaledVector(up, dy * k);
+// 自動追従の注視対象
+function autoFocus(){
+  const cl = S.cl, ml = S.ml, cr = S.cr;
+  if(cl.st === 'unload' && crBusy()){
+    const y = cr.slab ? Math.max(1.5, cr.pinY - cr.slab.L*0.5) : Math.max(1.5, cr.pinY - 1);
+    return { key:'crane', tgt:_v2.set(cr.cx*0.6, Math.min(y, 5.0), cr.tz*0.7 + 1.5), theta:0.46, phi:1.1, dist:20 };
   }
-});
-dom.addEventListener('wheel', e=>{
-  e.preventDefault();
-  cam.anim = null;
-  cam.dist = THREE.MathUtils.clamp(cam.dist * (e.deltaY > 0 ? 1.1 : 0.91), 3.5, 80);
-}, { passive:false });
-
-/* =====================================================================
- * メインループ
- * =================================================================== */
-const ease = t => t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
-const phaseEl = $('phase-txt'), dotEl = $('phase-dot');
-const sTemp = $('s-temp'), sLen = $('s-len'), sSpeed = $('s-speed'),
-      sTime = $('s-time'), prog = $('prog');
-let lastUiUpdate = 0;
-const clock = new THREE.Clock();
-
-function updateSim(dt){
-  if(state.paused) return;
-  const ph = state.phase;
-  state.phaseT += dt;
-  const simDt = dt * state.simScale;
-
-  switch(ph.id){
-    case 0: // 準備：溶湯フロー立上げ
-      state.flow = Math.min(1, state.phaseT / 4);
-      if(state.phaseT >= 4.5){ setPhase(PHASES.CASTING); }
-      break;
-    case 1: { // 定常鋳造
-      state.simT += simDt;
-      state.castLen += (state.speed / 1000 / 60) * simDt;
-      if(state.castLen >= state.target){
-        state.castLen = state.target;
-        setPhase(PHASES.DONE);
-      }
-      break;
-    }
-    case 2: // 完了：注湯停止・凝固待ち
-      state.flow = Math.max(0, 1 - state.phaseT / 2.5);
-      slabUniforms.uHot.value = Math.max(0.12, 1 - state.phaseT / 3);
-      if(state.phaseT >= 3.5){ setPhase(PHASES.RETRACT); }
-      break;
-    case 3: // テーブル退避
-      state.tableShift = ease(Math.min(1, state.phaseT / 3)) * 5.5;
-      if(state.phaseT >= 3.2){ setPhase(PHASES.LIFT); }
-      break;
-    case 4: { // スラブ引上げ
-      const maxRaise = state.castLen - 0.9;
-      state.raise = ease(Math.min(1, state.phaseT / 5.5)) * maxRaise;
-      if(state.phaseT >= 5.7){ setPhase(PHASES.UNLOAD); }
-      break;
-    }
-    case 5: // 搬出（クレーン吊上げの簡略表現）
-      state.slabFade = Math.max(0, 1 - state.phaseT / 1.8);
-      if(state.phaseT >= 2.2){ setPhase(PHASES.RETURN); }
-      break;
-    case 6: { // 復帰：ラム下降→テーブル復帰
-      const t = Math.min(1, state.phaseT / 3);
-      state.raise = (1 - ease(t)) * (state.castLen - 0.9);
-      if(state.phaseT >= 3.0 && state.phaseT < 6.2){
-        state.tableShift = (1 - ease((state.phaseT - 3) / 3)) * 5.5;
-      }
-      if(state.phaseT >= 6.4){
-        state.castLen = state.castLen0;
-        state.raise = 0; state.tableShift = 0;
-        state.slabFade = 1;
-        slabUniforms.uHot.value = 1;
-        setPhase(PHASES.PREP);
-      }
-      break;
-    }
-  }
+  if(['start','end','tilt','raise','prep'].includes(cl.st)) return { key:'table', tgt:_v2.set(-0.5, 1.2, 0.3), theta:0.78, phi:1.02, dist:15.5 };
+  // 定常鋳造は開始直後と終了間際を優先して見せる
+  const castLeft = (cl.target - cl.L) / Math.max(1e-6, SET.speed/60000*CAST_K);
+  const castFocus = { key:'cast', tgt:_v2.set(-0.8, 0.5, 0.2), theta:0.82, phi:0.92, dist:15 };
+  if(cl.st === 'cast' && (cl.t < 10 || castLeft < 5)) return castFocus;
+  if((ml.st === 'charge' || (ml.st === 'skim' && ml.sub === 'skim')) && chBusy())
+    return { key:'charger', tgt:_v2.set(lerp(S.ch.x, MF.x, 0.5), 2.2, lerp(Math.min(S.ch.z, 10), MF.hz, 0.4)), theta:0.85, phi:0.95, dist:15 };
+  if(ml.st === 'transfer') return { key:'transfer', tgt:_v2.set(-36.5, 2.0, 0), theta:1.25, phi:0.72, dist:17 };
+  if(ml.st === 'treat') return { key:'hf', tgt:_v2.set(-30.3, 1.8, 0), theta:1.2, phi:0.6, dist:15 };
+  if(cl.st === 'cast') return castFocus;
+  if(ml.st === 'melt' || ml.st === 'skim') return { key:'melt', tgt:_v2.set(MF.x, 2.4, 1.0), theta:1.2, phi:0.6, dist:15 };
+  if(cl.st === 'reset') return { key:'table', tgt:_v2.set(0, 1, 1), theta:0.8, phi:1.0, dist:18 };
+  return { key:'overview', tgt:_v2.set(-22, 1, 1), theta:1.05, phi:0.98, dist:74 };
 }
-
-function updateScene(dt, t){
-  // ---- スラブ・プラテン・ラム ----
-  const topY = MOLD.meltY + state.raise;
-  const len = state.castLen;
-  slabUniforms.uTopY.value = topY;
-  slabUniforms.uOpacity.value = state.slabFade;
-  slabs.forEach(s=>{
-    s.scale.y = len;
-    s.position.y = topY - len/2;
-    s.visible = state.slabFade > 0.02;
-  });
-  const platenTop = topY - len;
-  platen.position.y = platenTop;
-  // ラム可動ロッド：シリンダー上端(-PIT.depth+1.6)からプラテン下面まで
-  const rodBase = -PIT.depth + 1.5;
-  const rodTop = platenTop - 0.4;
-  const rod = ram.userData.rod;
-  const rodLen = Math.max(0.2, rodTop - rodBase);
-  rod.scale.y = rodLen;
-  rod.position.y = rodBase + rodLen/2;
-
-  // ---- テーブル退避 ----
-  castTable.position.x = state.tableShift;
-
-  // ---- 溶湯表現 ----
-  const flicker = 0.92 + Math.sin(t*7.3)*0.04 + Math.sin(t*13.7)*0.04;
-  M.melt.opacity = state.flow * flicker;
-  meltTex.offset.x -= dt * 0.35 * state.flow;
-  moldLight.intensity = state.flow * 1.6 * flicker * (state.slabFade > 0.5 ? 1 : 0.3)
-                        + slabUniforms.uHot.value * 0.4;
-  furnaceLight.intensity = 0.7 + Math.sin(t*5.1)*0.15;
-
-  // ---- 脱ガスローター ----
-  const rot = state.flow * dt * 9;
-  degasRotors.forEach(r=> r.rotation.y += rot);
-
-  // ---- 冷却水スプレー ----
-  const casting = state.phase.id <= 2 && state.flow > 0.05;
-  const waterK = state.water / 100;
-  sprayMat.opacity = casting ? 0.4 + 0.3 * waterK : 0;
-  if(casting){
-    const platenY = platenTop;
-    for(let i=0;i<SPRAY_N;i++){
-      let y = sprayPos[i*3+1] - sprayVel[i] * waterK * dt;
-      if(y < platenY || y < MOLD.botY - 3.2){ respawnDrop(i); }
-      else sprayPos[i*3+1] = y;
-    }
-    sprayGeo.attributes.position.needsUpdate = true;
-  }
-
-  // ---- 蒸気 ----
-  const steamOn = casting ? 1 : 0.25;
-  steamSprites.forEach(sp=>{
-    sp.userData.t += dt * 0.22;
-    if(sp.userData.t > 1){
-      sp.userData.t = 0;
-      sp.position.set((Math.random()-0.5)*4, PIT.waterY + 0.3, (Math.random()-0.5)*3.5);
-    }
-    const k = sp.userData.t;
-    sp.position.y = PIT.waterY + 0.3 + k * 4.5;
-    sp.material.opacity = Math.sin(k * Math.PI) * 0.3 * steamOn;
-    const s = 1.4 + k * 2.2;
-    sp.scale.set(s, s, 1);
-  });
-
-  // ---- クレーン（緩慢移動） ----
-  crane.position.x = -10 + Math.sin(t * 0.06) * 14;
-  crane.userData.trolley.position.z = Math.sin(t * 0.045) * 7;
-
-  // ---- カメラ ----
+function updateCamera(rdt){
   if(cam.anim){
-    const a = cam.anim;
-    a.t += dt;
-    const k = ease(Math.min(1, a.t / a.dur));
-    cam.theta = a.from.theta + (a.to.theta - a.from.theta) * k;
-    cam.phi   = a.from.phi   + (a.to.phi   - a.from.phi)   * k;
-    cam.dist  = a.from.dist  + (a.to.dist  - a.from.dist)  * k;
-    cam.target.lerpVectors(a.from.target, a.to.target, k);
+    const a = cam.anim; a.t += rdt;
+    const k = ease(Math.min(1, a.t/a.dur));
+    cam.theta = lerp(a.from.theta, a.to.theta, k); cam.phi = lerp(a.from.phi, a.to.phi, k);
+    cam.dist = lerp(a.from.dist, a.to.dist, k); cam.target.lerpVectors(a.from.target, a.to.target, k);
     if(a.t >= a.dur) cam.anim = null;
+  }else if(UI.auto){
+    const f = autoFocus();
+    if(!S.focus || S.focus.key !== f.key){
+      if(!S.focus || (S.t - S.focusT) > 3.5 || f.key === 'crane'){ S.focus = { key:f.key }; S.focusT = S.t; }
+    }
+    const kT = 1 - Math.exp(-rdt*1.6), kA = 1 - Math.exp(-rdt*0.7), aspK = aspectK();
+    const cur = S.focus.key === f.key ? f : null;
+    if(cur){
+      cam.target.lerp(cur.tgt, kT);
+      let th = cur.theta;
+      while(th - cam.theta > Math.PI) th -= Math.PI*2;
+      while(th - cam.theta < -Math.PI) th += Math.PI*2;
+      cam.theta = lerp(cam.theta, th, kA); cam.phi = lerp(cam.phi, cur.phi, kA); cam.dist = lerp(cam.dist, cur.dist*aspK, kA);
+    }
   }
   applyCamera();
 }
 
-function updateUI(t){
-  if(t - lastUiUpdate < 0.2) return;
-  lastUiUpdate = t;
-  const ph = state.phase;
-  phaseEl.textContent = state.paused ? ph.label + '（停止中）' : ph.label;
-  dotEl.style.background = state.paused ? '#8a96a3' : ph.color;
-  dotEl.style.color = dotEl.style.background;
-
-  const casting = ph.id <= 1;
-  const temp = casting ? 698 + Math.sin(t*0.7)*3 + Math.sin(t*2.3)*1.5 : NaN;
-  sTemp.innerHTML = (casting ? temp.toFixed(0) : '―') + '<small>°C</small>';
-  sLen.innerHTML = state.castLen.toFixed(2) + `<small>/ ${state.target.toFixed(2)} m</small>`;
-  prog.style.width = Math.min(100, (state.castLen - state.castLen0) / (state.target - state.castLen0) * 100) + '%';
-  sSpeed.innerHTML = state.speed + '<small>mm/min</small>';
-  const mins = Math.floor(state.simT / 60), secs = Math.floor(state.simT % 60);
-  sTime.innerHTML = mins + ':' + String(secs).padStart(2,'0') + '<small>実時間換算</small>';
+/* =====================================================================
+ * 22. UI
+ * =================================================================== */
+const UI = { auto:true };
+const ML_STEPS = [
+  ['charge','スクラップ装入','fa-truck-ramp-box'], ['melt','溶解（バーナー加熱）','fa-fire'],
+  ['skim','電磁攪拌・除滓','fa-broom'], ['ready','出湯待機','fa-hourglass-half'],
+  ['transfer','移湯（鋳造炉→保持炉）','fa-right-long'], ['treat','脱ガス・鎮静（保持炉）','fa-wind'],
+];
+const CL_STEPS = [
+  ['wait','溶湯待ち','fa-hourglass-start'], ['prep','鋳造準備','fa-screwdriver-wrench'],
+  ['start','注湯開始・スタートアップ','fa-faucet-drip'], ['cast','定常鋳造','fa-arrow-down-long'],
+  ['end','鋳造終了・ヘッド処理','fa-circle-stop'], ['tilt','鋳造テーブル傾動','fa-rotate'],
+  ['raise','スラブ引上げ','fa-arrow-up-long'], ['unload','クレーン搬出・横倒し','fa-truck-moving'],
+  ['reset','段取り復帰','fa-arrows-rotate'],
+];
+function buildSteps(el, list){
+  el.innerHTML = list.map(([id, lb, ic])=> `<li data-id="${id}"><i class="fa-solid ${ic}"></i><span>${lb}</span><span class="st"></span></li>`).join('');
+  return Array.from(el.children);
+}
+const mlItems = buildSteps($('steps-ml'), ML_STEPS), clItems = buildSteps($('steps-cl'), CL_STEPS);
+function markSteps(items, list, cur, sub){
+  const ci = list.findIndex(s=> s[0] === cur);
+  items.forEach((li, i)=>{
+    li.classList.toggle('done', i < ci);
+    li.classList.toggle('active', i === ci);
+    li.querySelector('.st').textContent = i === ci ? (sub || '') : '';
+  });
+}
+const PH_COL = { wait:'#8b97a4', prep:'#e8c25f', start:'#ff9a3c', cast:'#5fd08a', end:'#5fc6e8', tilt:'#e8c25f', raise:'#e8c25f', unload:'#e8c25f', reset:'#e8c25f' };
+let uiT = 0;
+function updateUI(rt){
+  uiT += rt; if(uiT < 0.15) return; uiT = 0;
+  const ml = S.ml, cl = S.cl, mfS = S.mf, hfS = S.hf;
+  $('clk').textContent = fmtT(S.t);
+  $('heat-no').textContent = `HEAT #${S.heat}`;
+  $('cast-no').textContent = `CAST #${S.castNo}`;
+  let mlSub = '';
+  if(ml.st === 'charge') mlSub = `${Math.min(ml.k + (chBusy() ? 1 : 0), ml.n)}/${ml.n}`;
+  else if(ml.st === 'melt') mlSub = `${Math.round(ml.meltP*100)}%`;
+  else if(ml.st === 'transfer') mlSub = `${(ml.amount - ml.left).toFixed(1)} t`;
+  markSteps(mlItems, ML_STEPS, ml.st, mlSub);
+  let clSub = '';
+  if(cl.st === 'cast' || cl.st === 'start') clSub = `${cl.L.toFixed(2)} m`;
+  else if(cl.st === 'unload') clSub = `${cl.done}/${cl.strands.length}`;
+  else if(cl.st === 'tilt') clSub = `${(cl.tilt/DEG).toFixed(0)}°`;
+  markSteps(clItems, CL_STEPS, cl.st, clSub);
+  // 炉況
+  const mfState = { charge:'装入中', melt:'溶解中', skim: ml.sub === 'stir' ? '電磁攪拌' : '除滓中', ready:'出湯待機', transfer:'移湯中', treat:'保持' }[ml.st];
+  $('mf-state').textContent = mfState;
+  $('mf-temp').textContent = mfS.T.toFixed(0);
+  $('mf-mass').textContent = mfS.liq.toFixed(1);
+  $('mf-burn').textContent = Math.round(mfS.burn*100);
+  const scrapLeft = ml.st === 'melt' ? ml.scrap*(1 - sstep(0.05, 1, ml.meltP)) : (ml.st === 'charge' ? ml.scrap : 0);
+  $('mf-scrap').textContent = scrapLeft.toFixed(1);
+  $('mf-bar').style.width = clamp(mfS.liq/MF.cap*100, 0, 100) + '%';
+  $('mf-bar2').style.left = clamp(mfS.liq/MF.cap*100, 0, 100) + '%';
+  $('mf-bar2').style.width = clamp(scrapLeft/MF.cap*100, 0, 100) + '%';
+  const hfState = ml.st === 'transfer' ? '受湯中' : ml.st === 'treat' ? '脱ガス処理' : (['start','cast'].includes(cl.st) ? '出湯中' : (hfS.ready ? '鋳造待機' : '保持'));
+  $('hf-state').textContent = hfState;
+  $('hf-temp').textContent = hfS.T.toFixed(0);
+  $('hf-mass').textContent = hfS.mass.toFixed(1);
+  $('hf-burn').textContent = Math.round(hfS.burn*100);
+  $('hf-tap').textContent = hfS.tap > 0.5 ? '開' : '閉';
+  $('hf-bar').style.width = clamp(hfS.mass/HF.cap*100, 0, 100) + '%';
+  // ステータスバー
+  $('phase-txt').textContent = (RUN.paused ? '停止中：' : '') + CL_LABEL[cl.st];
+  const col = RUN.paused ? '#8b97a4' : PH_COL[cl.st];
+  $('phase-dot').style.background = col; $('phase-dot').style.color = col;
+  const castingT = ['start','cast'].includes(cl.st);
+  $('s-temp').innerHTML = (castingT ? (hfS.T - 27 + Math.sin(S.t*0.7)*1.5).toFixed(0) : '―') + '<small>°C</small>';
+  const tgt = cl.strands.length ? cl.target : SET.target;
+  $('s-len').innerHTML = cl.L.toFixed(2) + `<small>/ ${tgt.toFixed(2)} m</small>`;
+  $('prog').style.width = clamp(cl.L/tgt*100, 0, 100) + '%';
+  $('s-speed').innerHTML = (castingT ? SET.speed : '―') + '<small>mm/min</small>';
+  $('s-time').innerHTML = fmtH(cl.realT) + '<small>h:mm</small>';
+  $('s-yard').innerHTML = S.yard + '<small>本</small>';
 }
 
-function loop(){
-  requestAnimationFrame(loop);
-  const dt = Math.min(0.05, clock.getDelta());
-  const t = clock.elapsedTime;
-  updateSim(dt);
-  updateScene(dt, t);
-  updateUI(t);
-  renderer.render(scene, camera);
+// 入力
+$('in-speed').addEventListener('input', e=>{ SET.speed = +e.target.value; $('v-speed').textContent = SET.speed + ' mm/min'; });
+$('in-water').addEventListener('input', e=>{ SET.water = +e.target.value; $('v-water').textContent = SET.water + ' m³/h'; });
+$('in-target').addEventListener('input', e=>{ SET.target = +e.target.value; $('v-target').textContent = SET.target.toFixed(1) + ' m'; });
+$('in-meltT').addEventListener('input', e=>{ SET.meltT = +e.target.value; $('v-meltT').textContent = SET.meltT + ' °C'; });
+function pills(id, fn){
+  const el = $(id);
+  el.querySelectorAll('button').forEach(b=> b.addEventListener('click', ()=>{
+    el.querySelectorAll('button').forEach(x=> x.classList.toggle('on', x === b)); fn(+b.dataset.v);
+  }));
+}
+pills('pl-strands', v=>{ SET.strands = v; $('v-strands').textContent = v + ' 本'; });
+pills('pl-charges', v=>{ SET.charges = v; $('v-charges').textContent = v + ' 回'; });
+document.querySelectorAll('#speed-seg button').forEach(b=> b.addEventListener('click', ()=>{
+  document.querySelectorAll('#speed-seg button').forEach(x=> x.classList.toggle('on', x === b));
+  RUN.speed = +b.dataset.speed;
+}));
+$('btn-pause').addEventListener('click', ()=>{
+  RUN.paused = !RUN.paused;
+  $('btn-pause').innerHTML = RUN.paused ? '<i class="fa-solid fa-play"></i>' : '<i class="fa-solid fa-pause"></i>';
+  $('btn-pause').classList.toggle('hot', RUN.paused);
+});
+$('btn-reset').addEventListener('click', ()=>{ initState(); });
+$('btn-panels').addEventListener('click', ()=>{
+  const b = document.body, w = window.innerWidth;
+  if(w <= 760){
+    if(b.classList.contains('show-panel')){ b.classList.remove('show-panel'); b.classList.add('show-side'); }
+    else if(b.classList.contains('show-side')){ b.classList.remove('show-side'); }
+    else b.classList.add('show-panel');
+  }else if(w <= 1180){
+    b.classList.toggle('show-side');
+  }else b.classList.toggle('hide-panels');
+});
+$('tg-auto').addEventListener('change', e=>{ UI.auto = e.target.checked; if(UI.auto){ cam.anim = null; S.focus = null; } });
+$('tg-roof').addEventListener('change', e=>{ mf.roof.visible = hf.roof.visible = !e.target.checked; });
+function setPitXray(on){
+  M.pitWall.opacity = on ? 0.22 : 1.0; M.pitWall.depthWrite = !on; M.pitWall.needsUpdate = true;
+}
+$('tg-pit').addEventListener('change', e=> setPitXray(e.target.checked));
+$('tg-label').addEventListener('change', e=>{ SET.labels = e.target.checked; });
+$('tg-bloom').addEventListener('change', e=>{ Post.on = e.target.checked; applyRenderMode(); });
+if(!Post.ok){ $('tg-bloom').checked = false; $('tg-bloom').disabled = true; Post.on = false; }
+function stopAuto(){ if(UI.auto){ UI.auto = false; $('tg-auto').checked = false; } }
+document.querySelectorAll('[data-cam]').forEach(b=> b.addEventListener('click', ()=>{
+  const k = b.dataset.cam, p = CAM_PRESETS[k];
+  stopAuto();
+  if(k === 'pit' && !$('tg-pit').checked){ $('tg-pit').checked = true; setPitXray(true); }
+  if((k === 'mf' || k === 'hf') && !$('tg-roof').checked){ $('tg-roof').checked = true; mf.roof.visible = hf.roof.visible = false; }
+  flyTo(p[0], p[1]);
+}));
+mf.roof.visible = hf.roof.visible = !$('tg-roof').checked;
+
+// マウス・タッチ操作
+const dom = renderer.domElement;
+const ptrs = new Map();
+let dragMode = -1, lastX = 0, lastY = 0, pinch0 = 0;
+dom.addEventListener('contextmenu', e=> e.preventDefault());
+dom.addEventListener('pointerdown', e=>{
+  dom.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, { x:e.clientX, y:e.clientY });
+  dragMode = (e.button === 2 || e.button === 1 || e.shiftKey) ? 1 : 0;
+  lastX = e.clientX; lastY = e.clientY;
+  if(ptrs.size === 2){ const a = [...ptrs.values()]; pinch0 = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); }
+});
+dom.addEventListener('pointerup', e=>{ ptrs.delete(e.pointerId); if(!ptrs.size) dragMode = -1; });
+dom.addEventListener('pointercancel', e=>{ ptrs.delete(e.pointerId); if(!ptrs.size) dragMode = -1; });
+function panBy(dx, dy){
+  const right = _v1.setFromMatrixColumn(camera.matrix, 0), up = _v2.setFromMatrixColumn(camera.matrix, 1);
+  const k = cam.dist * 0.0011;
+  cam.target.addScaledVector(right, -dx*k).addScaledVector(up, dy*k);
+}
+dom.addEventListener('pointermove', e=>{
+  if(!ptrs.has(e.pointerId)) return;
+  const prev = ptrs.get(e.pointerId);
+  ptrs.set(e.pointerId, { x:e.clientX, y:e.clientY });
+  if(ptrs.size === 2){
+    const a = [...ptrs.values()], d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
+    if(pinch0 > 0){ cam.dist = clamp(cam.dist * pinch0/d, 3, 140); }
+    pinch0 = d; panBy((e.clientX - prev.x)*0.5, (e.clientY - prev.y)*0.5);
+    stopAuto(); cam.anim = null; return;
+  }
+  const dx = e.clientX - lastX, dy = e.clientY - lastY;
+  lastX = e.clientX; lastY = e.clientY;
+  if(Math.abs(dx) + Math.abs(dy) < 1) return;
+  stopAuto(); cam.anim = null;
+  if(dragMode === 0){
+    cam.theta += dx*0.0055;
+    cam.phi = clamp(cam.phi - dy*0.0045, 0.08, 1.62);
+  }else if(dragMode === 1) panBy(dx, dy);
+});
+dom.addEventListener('wheel', e=>{
+  e.preventDefault(); stopAuto(); cam.anim = null;
+  cam.dist = clamp(cam.dist * (e.deltaY > 0 ? 1.1 : 0.91), 3, 140);
+}, { passive:false });
+
+/* ---- ラベル更新 ---- */
+function updateLabels(){
+  const w = window.innerWidth, h = window.innerHeight;
+  for(const lb of LBL){
+    const p = lb.fn ? lb.fn(_v3) : _v3.copy(lb.pos);
+    p.project(camera);
+    const on = SET.labels && p.z < 1 && p.z > -1 && Math.abs(p.x) < 1.05 && Math.abs(p.y) < 1.05;
+    if(!on){ if(lb.vis){ lb.el.style.display = 'none'; lb.vis = false; } continue; }
+    if(!lb.vis){ lb.el.style.display = ''; lb.vis = true; }
+    const x = (p.x*0.5 + 0.5)*w, y = (-p.y*0.5 + 0.5)*h;
+    lb.el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-50%,calc(-100% - 10px))`;
+  }
 }
 
+/* =====================================================================
+ * 23. メインループ
+ * =================================================================== */
+flush(STATIC, scene);
+applyRenderMode();
+initState();
+applyCamera();
+
+const clock = new THREE.Clock();
+let first = true;
+function frame(){
+  requestAnimationFrame(frame);
+  const rdt = Math.min(0.05, clock.getDelta());
+  const dt = RUN.paused ? 0 : rdt * RUN.speed;
+  if(dt > 0){ const n = Math.ceil(dt / 0.034); for(let i=0;i<n;i++) simStep(dt/n); }
+  updateVisuals(dt, rdt);
+  updateCamera(rdt);
+  updateLabels();
+  updateUI(rdt);
+  Post.render();
+  if(first){ first = false; const ld = $('loading'); ld.style.opacity = 0; setTimeout(()=> ld.remove(), 600); }
+}
 window.addEventListener('resize', ()=>{
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  Post.resize();
 });
-
-applyCamera();
-loop();
+// 検証用フック
+window.__dc = {
+  S, SET, RUN, cam, camera, flyTo, CAM_PRESETS, renderer, scene, mf, hf, table, crane, charger, slabs, furnaceScrap,
+  advance(sec, step){ step = step || 1/30; for(let t=0; t<sec; t+=step){ simStep(step); updateVisuals(step, step); updateCamera(step); } },
+  view(k){ stopAuto(); const p = CAM_PRESETS[k]; const s = sphFrom(p[0], p[1]); cam.anim = null; cam.target.copy(p[1]); cam.theta = s.theta; cam.phi = s.phi; cam.dist = s.dist; applyCamera(); },
+};
+frame();
 })();
 </script>
 </body>
